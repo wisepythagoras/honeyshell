@@ -74,6 +74,9 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 	fmt.Println(ip.String(), port, "connection request")
 	logger.Println(ip.String(), port, "connection request")
 
+	// Set how we want to allow peers to connect.
+	C.ssh_set_auth_methods(*session, C.SSH_AUTH_METHOD_PASSWORD | C.SSH_AUTH_METHOD_PUBLICKEY);
+
 	// Handle the key exchange.
 	if C.ssh_handle_key_exchange(*session) != C.SSH_OK {
 		// If there was an error, report it.
@@ -100,9 +103,11 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 			break
 		}
 
+		messageType := C.ssh_message_subtype(message)
+
 		// If the attacker is submitting an authentication message, then we need to read
 		// it and output the data that they entered.
-		if C.ssh_message_subtype(message) == C.SSH_AUTH_METHOD_PASSWORD {
+		if messageType == C.SSH_AUTH_METHOD_PASSWORD {
 			logger.Printf("%s %s %s\n",
 				ip.String(),
 				C.GoString(C.ssh_message_auth_user(message)),
@@ -111,6 +116,8 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 				ip.String(),
 				C.GoString(C.ssh_message_auth_user(message)),
 				C.GoString(C.ssh_message_auth_password(message)))
+		} else if messageType == C.SSH_AUTH_METHOD_PUBLICKEY {
+		    // pubKey := C.ssh_message_auth_pubkey(message)
 		}
 
 		// Reply with the default message and clear the pointer.
@@ -166,3 +173,4 @@ func GetSSHSockaddr(session C.ssh_session) *syscall.Sockaddr {
 
 	return &sock
 }
+

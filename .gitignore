@@ -17,3 +17,4 @@ honeyshell.log
 bin
 src
 libssh-*
+id_rsa*

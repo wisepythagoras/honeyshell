@@ -21,10 +21,6 @@ func main() {
 	// Parse the command line arguments (flags).
 	flag.Parse()
 
-	// Start the logger.
-	logger = GetLogmanInstance()
-	logger.Println("Starting Honeyshell")
-
 	// Require an RSA key.
 	if *key == "" {
 		fmt.Println("An RSA key is required. Use the '-key' flag")
@@ -36,6 +32,10 @@ func main() {
 		fmt.Printf("Invalid port number %d\n", *port)
 		return
 	}
+
+	// Start the logger.
+	logger = GetLogmanInstance()
+	logger.Println("Starting Honeyshell")
 
 	// Create a new SSH server object.
 	sshServer := &SSHServer{

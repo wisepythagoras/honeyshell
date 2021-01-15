@@ -5,4 +5,4 @@ export CGO_CFLAGS="-I/usr/include -I/usr/local/include"
 
 go build .
 
-go build -ldflags "-linkmode external -extldflags -static" -o honeyshell-c .
+#go build -ldflags "-linkmode external -extldflags -static" -o honeyshell-c .

@@ -32,3 +32,4 @@ func CreateLogmanLogger(fname string) *Logman {
 		Logger:   log.New(file, "", log.Ldate|log.Ltime),
 	}
 }
+
