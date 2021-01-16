@@ -8,7 +8,15 @@ Currently, it allows connections on the server and collects failed login attempt
 
 There are three dependencies, which are the following:
 
-### 1. [libssh](https://www.libssh.org/)
+### 1. `libgcrypt` and `libgpg-error`
+
+Install them from your package manager:
+
+``` sh
+sudo apt install libgcrypt20-dev libgpg-error-dev
+```
+
+### 2. [libssh](https://www.libssh.org/)
 
 Download the source from the website and build with the following script:
 
@@ -23,14 +31,6 @@ cmake \
     ..
 make
 sudo make install
-```
-
-### 2. `libgcrypt` and `libgpg-error`
-
-Install them from your package manager:
-
-``` sh
-sudo apt install libgcrypt20-dev libgpg-error-dev
 ```
 
 ### Compile
@@ -64,20 +64,12 @@ The output should look something like this:
 ```
 Starting on port 2222
 Changing permissions to user 'nobody'
-192.168.0.5 35034 connection request
-192.168.0.5 35034 client connected with SSH-2.0-OpenSSH_7.6p1 Ubuntu-4
-192.168.0.5 admin password
-192.168.0.5 admin password123
-192.168.0.5 connection terminated
-192.168.0.5 35036 connection request
-192.168.0.5 35036 client connected with SSH-2.0-OpenSSH_7.6p1 Ubuntu-4
-192.168.0.5 admin test
-192.168.0.5 admin test123
-192.168.0.5 connection terminated
-192.168.0.200 45250 connection request
-192.168.0.200 45250 client connected with SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u3
-192.168.0.200 admin password
-192.168.0.200 admin mindy
-192.168.0.200 admin testytest
-192.168.0.200 connection terminated
+127.0.0.1 60812 connection request
+127.0.0.1 60812 client connected with SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u6
+127.0.0.1 admin 216247142fed250e4c5bfdfe1af2262a8000f0581f1f6bd20509cd49d542a27a
+127.0.0.1 admin 3bc98ba6299bcb10d0eb185be884a12ee35e5eb311edb77fe99f36e92fbba603
+127.0.0.1 admin 1f671129e0ca2917e24809271109e20378f4f50de41bfa9f5b578056535f64e1
+127.0.0.1 admin password123
+127.0.0.1 admin passwordtest
+127.0.0.1 connection terminated
 ```
