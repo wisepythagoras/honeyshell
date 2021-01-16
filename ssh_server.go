@@ -133,18 +133,16 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 			pubKeyHash, err := GetSHA3256Hash(C.GoBytes(unsafe.Pointer(pubKey),
 				C.int(len(C.GoString(pubKey)))))
 
-			if err != nil {
-				//
+			if err == nil {
+				logger.Printf("%s %s %s\n",
+					ip.String(),
+					C.GoString(C.ssh_message_auth_user(message)),
+					ByteArrayToHex(pubKeyHash))
+				fmt.Printf("%s %s %s\n",
+					ip.String(),
+					C.GoString(C.ssh_message_auth_user(message)),
+					ByteArrayToHex(pubKeyHash))
 			}
-
-			logger.Printf("%s %s %s\n",
-				ip.String(),
-				C.GoString(C.ssh_message_auth_user(message)),
-				ByteArrayToHex(pubKeyHash))
-			fmt.Printf("%s %s %s\n",
-				ip.String(),
-				C.GoString(C.ssh_message_auth_user(message)),
-				ByteArrayToHex(pubKeyHash))
 		} else {
 			C.ssh_message_auth_set_methods(message, authMethods);
 			C.ssh_message_reply_default(message);
