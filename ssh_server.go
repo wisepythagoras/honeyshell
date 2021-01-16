@@ -122,7 +122,7 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 			// be interesting to capture some keys from those who are not careful.
 			authKey := C.ssh_message_auth_pubkey(message)
 
-            // This will hold the public key blob. ssh_message_auth_publickey_state
+			// This will hold the public key blob. ssh_message_auth_publickey_state
 			var pubKey *C.char
 
 			// Now get the public key blob.
