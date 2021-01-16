@@ -14,7 +14,24 @@ struct ssh_key_struct {
     enum ssh_keytypes_e type;
     int flags;
     const char *type_c;
-    int ecdsa_nid;
+	int ecdsa_nid;
+#if defined(HAVE_LIBGCRYPT)
+    gcry_sexp_t dsa;
+    gcry_sexp_t rsa;
+    gcry_sexp_t ecdsa;
+#elif defined(HAVE_LIBMBEDCRYPTO)
+    mbedtls_pk_context *rsa;
+    mbedtls_ecdsa_context *ecdsa;
+    void *dsa;
+#elif defined(HAVE_LIBCRYPTO)
+    DSA *dsa;
+    RSA *rsa;
+# if defined(HAVE_OPENSSL_ECC)
+    EC_KEY *ecdsa;
+# else
+    void *ecdsa;
+# endif
+#endif
     void *cert;
     enum ssh_keytypes_e cert_type;
 };
