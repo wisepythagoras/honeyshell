@@ -1,13 +1,32 @@
 package main
 
-// #include <stdlib.h>
-// #include <pwd.h>
-// #include <sys/types.h>
-// #include <grp.h>
-// #include <inttypes.h>
-// #include <sys/types.h>
-// #include <libssh/libssh.h>
-// #include <libssh/server.h>
+/*
+#include <stdlib.h>
+#include <pwd.h>
+#include <sys/types.h>
+#include <grp.h>
+#include <inttypes.h>
+#include <sys/types.h>
+#include <libssh/libssh.h>
+#include <libssh/server.h>
+
+struct ssh_key_struct {
+    enum ssh_keytypes_e type;
+    int flags;
+    const char *type_c;
+    int ecdsa_nid;
+    void *cert;
+    enum ssh_keytypes_e cert_type;
+};
+
+const char *get_ssh_key_type(const ssh_key key) {
+	if (key == NULL) {
+		return NULL;
+	}
+
+	return key->type_c;
+}
+*/
 import "C"
 
 import (
@@ -76,7 +95,7 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 	logger.Println(ip.String(), port, "connection request")
 
 	// Set how we want to allow peers to connect.
-	C.ssh_set_auth_methods(*session, authMethods);
+	C.ssh_set_auth_methods(*session, authMethods)
 
 	// Handle the key exchange.
 	if C.ssh_handle_key_exchange(*session) != C.SSH_OK {
@@ -109,11 +128,11 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 		// If the attacker is submitting an authentication message, then we need to read
 		// it and output the data that they entered.
 		if messageType == C.SSH_AUTH_METHOD_PASSWORD {
-			logger.Printf("%s %s %s\n",
+			logger.Printf("%s %s pass:%s\n",
 				ip.String(),
 				C.GoString(C.ssh_message_auth_user(message)),
 				C.GoString(C.ssh_message_auth_password(message)))
-			fmt.Printf("%s %s %s\n",
+			fmt.Printf("%s %s pass:%s\n",
 				ip.String(),
 				C.GoString(C.ssh_message_auth_user(message)),
 				C.GoString(C.ssh_message_auth_password(message)))
@@ -134,23 +153,25 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 				C.int(len(C.GoString(pubKey)))))
 
 			if err == nil {
-				logger.Printf("%s %s %s\n",
+				logger.Printf("%s %s key:%s (%s)\n",
 					ip.String(),
 					C.GoString(C.ssh_message_auth_user(message)),
-					ByteArrayToHex(pubKeyHash))
-				fmt.Printf("%s %s %s\n",
+					ByteArrayToHex(pubKeyHash),
+					C.GoString(C.get_ssh_key_type(authKey)))
+				fmt.Printf("%s %s key:%s (%s)\n",
 					ip.String(),
 					C.GoString(C.ssh_message_auth_user(message)),
-					ByteArrayToHex(pubKeyHash))
+					ByteArrayToHex(pubKeyHash),
+					C.GoString(C.get_ssh_key_type(authKey)))
 			}
 		} else {
-			C.ssh_message_auth_set_methods(message, authMethods);
-			C.ssh_message_reply_default(message);
-			continue;
+			C.ssh_message_auth_set_methods(message, authMethods)
+			C.ssh_message_reply_default(message)
+			continue
 		}
 
 		// Reply with the default message and clear the pointer.
-		C.ssh_message_auth_set_methods(message, authMethods);
+		C.ssh_message_auth_set_methods(message, authMethods)
 		C.ssh_message_reply_default(message)
 		C.ssh_message_free(message)
 	}
@@ -203,4 +224,3 @@ func GetSSHSockaddr(session C.ssh_session) *syscall.Sockaddr {
 
 	return &sock
 }
-
