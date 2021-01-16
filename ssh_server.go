@@ -63,6 +63,7 @@ func (server *SSHServer) Init() bool {
 func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 	// Get the IP of the client that's connected.
 	ip, port, _ := SockAddrToIP(GetSSHSockaddr(*session))
+	authMethods := (C.int)(C.SSH_AUTH_METHOD_PASSWORD | C.SSH_AUTH_METHOD_PUBLICKEY)
 
 	// Get the status of the connection and report if it's closed.
 	if C.ssh_get_status(*session) != 0 {
@@ -75,7 +76,7 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 	logger.Println(ip.String(), port, "connection request")
 
 	// Set how we want to allow peers to connect.
-	C.ssh_set_auth_methods(*session, C.SSH_AUTH_METHOD_PASSWORD | C.SSH_AUTH_METHOD_PUBLICKEY);
+	C.ssh_set_auth_methods(*session, authMethods);
 
 	// Handle the key exchange.
 	if C.ssh_handle_key_exchange(*session) != C.SSH_OK {
@@ -117,10 +118,41 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 				C.GoString(C.ssh_message_auth_user(message)),
 				C.GoString(C.ssh_message_auth_password(message)))
 		} else if messageType == C.SSH_AUTH_METHOD_PUBLICKEY {
-		    // pubKey := C.ssh_message_auth_pubkey(message)
+			// Get the user's auth key. This may not be that helpful, but I think it may
+			// be interesting to capture some keys from those who are not careful.
+			authKey := C.ssh_message_auth_pubkey(message)
+
+            // This will hold the public key blob. ssh_message_auth_publickey_state
+			var pubKey *C.char
+
+			// Now get the public key blob.
+			C.ssh_pki_export_pubkey_base64(authKey, &pubKey)
+
+			// Now we get the SHA3-256 hash of the public key, because it may be too long
+			// to display on the screen.
+			pubKeyHash, err := GetSHA3256Hash(C.GoBytes(unsafe.Pointer(pubKey),
+				C.int(len(C.GoString(pubKey)))))
+
+			if err != nil {
+				//
+			}
+
+			logger.Printf("%s %s %s\n",
+				ip.String(),
+				C.GoString(C.ssh_message_auth_user(message)),
+				ByteArrayToHex(pubKeyHash))
+			fmt.Printf("%s %s %s\n",
+				ip.String(),
+				C.GoString(C.ssh_message_auth_user(message)),
+				ByteArrayToHex(pubKeyHash))
+		} else {
+			C.ssh_message_auth_set_methods(message, authMethods);
+			C.ssh_message_reply_default(message);
+			continue;
 		}
 
 		// Reply with the default message and clear the pointer.
+		C.ssh_message_auth_set_methods(message, authMethods);
 		C.ssh_message_reply_default(message)
 		C.ssh_message_free(message)
 	}

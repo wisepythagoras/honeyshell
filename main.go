@@ -74,3 +74,4 @@ func main() {
 
 	logger.Println("Terminating process")
 }
+
