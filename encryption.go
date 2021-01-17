@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/asn1"
+
 	//"encoding/gob"
 	"encoding/pem"
 )
@@ -70,4 +71,3 @@ func (enc *Encryption) GetPublicKey() string {
 	// Return the string representation.
 	return string(strPubKey)
 }
-

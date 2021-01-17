@@ -14,6 +14,7 @@
 honeyshell
 honeyshell-c
 honeyshell.log
+honeyshell.db
 bin
 src
 libssh-*

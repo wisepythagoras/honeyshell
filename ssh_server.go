@@ -47,13 +47,16 @@ const char *get_ssh_key_type(const ssh_key key) {
 import "C"
 
 import (
-	"fmt"
+	"log"
 	"syscall"
 	"unsafe"
+
+	"gorm.io/gorm"
 )
 
 // SSHServer : This is the object that defines an SSH server.
 type SSHServer struct {
+	db      *gorm.DB
 	port    int
 	address string
 	key     string
@@ -82,17 +85,35 @@ func (server *SSHServer) Init() bool {
 	C.ssh_bind_options_set(server.sshbind, C.SSH_BIND_OPTIONS_BANNER, banner)
 	C.ssh_bind_options_set(server.sshbind, C.SSH_BIND_OPTIONS_RSAKEY, rsaKey)
 
-	fmt.Println("Starting on port", server.port)
-	logger.Println("Starting on port", server.port)
+	// If the database object is passed to the constructor / intializer of the SSHServer, Go returns
+	// the following error. Figure it out.
+	//
+	// panic: runtime error: cgo argument has Go pointer to Go pointer
+	// goroutine 1 [running]:
+	// main.(*SSHServer).Init.func2(0xc000243180, 0xc000243180, 0x0)
+	// 	/home/diogenis/Projects/honeyshell/ssh_server.go:84 +0x6e
+	// main.(*SSHServer).Init(0xc000243180, 0xc000243180)
+	// 	/home/diogenis/Projects/honeyshell/ssh_server.go:84 +0xe5
+	// main.main()
+	// 	/home/diogenis/Projects/honeyshell/main.go:55 +0x345
+
+	log.Println("Starting on port", server.port)
+	logman.Println("Starting on port", server.port)
 
 	// Try to start listening on the given port.
 	if int(C.ssh_bind_listen(server.sshbind)) < 0 {
-		fmt.Println("Error binding:", C.GoString(C.ssh_get_error(unsafe.Pointer(server.sshbind))))
-		logger.Println("Error binding:", C.GoString(C.ssh_get_error(unsafe.Pointer(server.sshbind))))
+		log.Println("Error binding:", C.GoString(C.ssh_get_error(unsafe.Pointer(server.sshbind))))
+		logman.Println("Error binding:", C.GoString(C.ssh_get_error(unsafe.Pointer(server.sshbind))))
 		return false
 	}
 
 	return true
+}
+
+// SetDB sets the database. For some reason this can't be passed in the constructor / initializer,
+// because this error happens: "panic: runtime error: cgo argument has Go pointer to Go pointer".
+func (server *SSHServer) SetDB(db *gorm.DB) {
+	server.db = db
 }
 
 // HandleSSHAuth : Handles the authentication process.
@@ -104,12 +125,12 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 	// Get the status of the connection and report if it's closed.
 	if C.ssh_get_status(*session) != 0 {
 		err := C.GoString(C.ssh_get_error(unsafe.Pointer(*session)))
-		logger.Println(ip.String() + " closed status: " + err)
-		fmt.Println(ip.String() + " closed status: " + err)
+		logman.Println(ip.String() + " closed status: " + err)
+		log.Println(ip.String() + " closed status: " + err)
 	}
 
-	fmt.Println(ip.String(), port, "connection request")
-	logger.Println(ip.String(), port, "connection request")
+	log.Println(ip.String(), port, "connection request")
+	logman.Println(ip.String(), port, "connection request")
 
 	// Set how we want to allow peers to connect.
 	C.ssh_set_auth_methods(*session, authMethods)
@@ -120,8 +141,8 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 		sshErr := C.GoString(C.ssh_get_error(unsafe.Pointer(*session)))
 		err := ip.String() + " Error exchanging keys " + sshErr
 
-		logger.Println(err)
-		fmt.Println(err)
+		logman.Println(err)
+		log.Println(err)
 
 		return false
 	}
@@ -129,8 +150,8 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 	// Get the client's SSH banner. This can give us some useful information as to what
 	// software the attacker is running.
 	clientBanner := C.GoString(C.ssh_get_clientbanner(*session))
-	fmt.Println(ip.String(), port, "client connected with", clientBanner)
-	logger.Println(ip.String(), port, "client connected with", clientBanner)
+	log.Println(ip.String(), port, "client connected with", clientBanner)
+	logman.Println(ip.String(), port, "client connected with", clientBanner)
 
 	for {
 		// Receive the message from the client.
@@ -141,24 +162,31 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 		}
 
 		messageType := C.ssh_message_subtype(message)
+		username := C.GoString(C.ssh_message_auth_user(message))
 
 		// If the attacker is submitting an authentication message, then we need to read
 		// it and output the data that they entered.
 		if messageType == C.SSH_AUTH_METHOD_PASSWORD {
-			logger.Printf("%s %s pass:%s\n",
-				ip.String(),
-				C.GoString(C.ssh_message_auth_user(message)),
-				C.GoString(C.ssh_message_auth_password(message)))
-			fmt.Printf("%s %s pass:%s\n",
-				ip.String(),
-				C.GoString(C.ssh_message_auth_user(message)),
-				C.GoString(C.ssh_message_auth_password(message)))
+			password := C.GoString(C.ssh_message_auth_password(message))
+
+			// Add the password to the database.
+			server.db.Create(&PasswordConnection{
+				IPAddress: ip.String(),
+				Username:  username,
+				Password:  password,
+			})
+
+			logman.Printf("%s %s pass:%s\n", ip.String(), username, password)
+			log.Printf("%s %s pass:%s\n", ip.String(), username, password)
 		} else if messageType == C.SSH_AUTH_METHOD_PUBLICKEY {
 			// Get the user's auth key. This may not be that helpful, but I think it may
 			// be interesting to capture some keys from those who are not careful.
 			authKey := C.ssh_message_auth_pubkey(message)
 
-			// This will hold the public key blob. ssh_message_auth_publickey_state
+			// Get the key type (ssh-rsa, etc).
+			keyType := C.GoString(C.get_ssh_key_type(authKey))
+
+			// This will hold the public key in base64.
 			var pubKey *C.char
 
 			// Now get the public key blob.
@@ -169,17 +197,25 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 			pubKeyHash, err := GetSHA3256Hash(C.GoBytes(unsafe.Pointer(pubKey),
 				C.int(len(C.GoString(pubKey)))))
 
+			// Add the key to the database.
+			server.db.Create(&KeyConnection{
+				IPAddress: ip.String(),
+				Username:  username,
+				Key:       C.GoString(pubKey),
+				KeyHash:   ByteArrayToHex(pubKeyHash),
+			})
+
 			if err == nil {
-				logger.Printf("%s %s key:%s (%s)\n",
+				logman.Printf("%s %s key:%s (%s)\n",
 					ip.String(),
-					C.GoString(C.ssh_message_auth_user(message)),
+					username,
 					ByteArrayToHex(pubKeyHash),
-					C.GoString(C.get_ssh_key_type(authKey)))
-				fmt.Printf("%s %s key:%s (%s)\n",
+					keyType)
+				log.Printf("%s %s key:%s (%s)\n",
 					ip.String(),
-					C.GoString(C.ssh_message_auth_user(message)),
+					username,
 					ByteArrayToHex(pubKeyHash),
-					C.GoString(C.get_ssh_key_type(authKey)))
+					keyType)
 			}
 		} else {
 			C.ssh_message_auth_set_methods(message, authMethods)
@@ -193,8 +229,8 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 		C.ssh_message_free(message)
 	}
 
-	fmt.Println(ip.String(), "connection terminated")
-	logger.Println(ip.String(), "connection terminated")
+	log.Println(ip.String(), "connection terminated")
+	logman.Println(ip.String(), "connection terminated")
 
 	return true
 }
@@ -209,8 +245,8 @@ func (server *SSHServer) ListenLoop() {
 		// Try to accept the connection.
 		if C.ssh_bind_accept(server.sshbind, session) == C.SSH_ERROR {
 			msg := C.GoString(C.ssh_get_error(unsafe.Pointer(server.sshbind)))
-			fmt.Println("Error accepting", msg)
-			logger.Println("Error accepting", msg)
+			log.Println("Error accepting", msg)
+			logman.Println("Error accepting", msg)
 			continue
 		}
 
@@ -234,8 +270,8 @@ func GetSSHSockaddr(session C.ssh_session) *syscall.Sockaddr {
 	sock, err := syscall.Getpeername(sockFd)
 
 	if err != nil {
-		fmt.Println(err.Error())
-		logger.Println(err.Error())
+		log.Println(err.Error())
+		logman.Println(err.Error())
 		return nil
 	}
 

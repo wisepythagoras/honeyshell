@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// Logman is a struct that handles logging to a file.
 type Logman struct {
 	filename string
 	*log.Logger
@@ -32,4 +33,3 @@ func CreateLogmanLogger(fname string) *Logman {
 		Logger:   log.New(file, "", log.Ldate|log.Ltime),
 	}
 }
-

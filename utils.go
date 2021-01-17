@@ -23,14 +23,14 @@ func ChangePermissions(name string) bool {
 		fmt.Printf("%s\n", err.Error())
 		return false
 	} else {
-		logger.Println(name, "has gid:", uint32(passwdC.pw_gid), "and uid:", uint32(passwdC.pw_uid))
+		logman.Println(name, "has gid:", uint32(passwdC.pw_gid), "and uid:", uint32(passwdC.pw_uid))
 
 		// Set the group id before anything else.
 		if int(C.setgid(passwdC.pw_gid)) == -1 {
 			errStr := "Unable to set group id"
 
 			fmt.Println(errStr)
-			logger.Println(errStr)
+			logman.Println(errStr)
 
 			return false
 		}
@@ -40,13 +40,13 @@ func ChangePermissions(name string) bool {
 			errStr := "Unable to set user id"
 
 			fmt.Printf(errStr)
-			logger.Println(errStr)
+			logman.Println(errStr)
 
 			return false
 		}
 	}
 
-	logger.Println("User set to", name)
+	logman.Println("User set to", name)
 
 	return true
 }

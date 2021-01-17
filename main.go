@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 )
 
-var logger *Logman
+var logman *Logman
 
 // https://github.com/karfield/ssh2go/
 // http://api.libssh.org/master/group__libssh__session.html
@@ -23,19 +23,24 @@ func main() {
 
 	// Require an RSA key.
 	if *key == "" {
-		fmt.Println("An RSA key is required. Use the '-key' flag")
-		return
+		log.Fatalln("An RSA key is required. Use the '-key' flag")
 	}
 
 	// Validate the port.
 	if *port < 1 || *port > 65535 {
-		fmt.Printf("Invalid port number %d\n", *port)
-		return
+		log.Fatalf("Invalid port number %d\n", *port)
 	}
 
-	// Start the logger.
-	logger = GetLogmanInstance()
-	logger.Println("Starting Honeyshell")
+	// Start the logman.
+	logman = GetLogmanInstance()
+	logman.Println("Starting Honeyshell")
+
+	// Connect to the database.
+	db, err := ConnectDB()
+
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	// Create a new SSH server object.
 	sshServer := &SSHServer{
@@ -47,21 +52,23 @@ func main() {
 
 	// Initialize the SSH server.
 	if !sshServer.Init() {
-		fmt.Println("Unable to start server")
-		return
+		log.Fatalln("Unable to start server")
 	}
+
+	// Set the database onto the sshServer instance.
+	sshServer.SetDB(db)
 
 	// Now, if there was a username passed from the command line arguments, try to switch
 	// all of the permissions to that user.
 	if *username != "" {
-		fmt.Printf("Changing permissions to user '%s'\n", *username)
+		log.Printf("Changing permissions to user '%s'\n", *username)
 
 		// If this fails it means that either the program wasn't run with 'sudo.' or the user
 		// doesn't have sufficient permissions.
 		if !ChangePermissions(*username) {
 			err := "Either the user does not exist or you don't have adequate permissions"
-			fmt.Println(err)
-			logger.Println(err)
+			log.Println(err)
+			logman.Println(err)
 			return
 		}
 	}
@@ -72,6 +79,5 @@ func main() {
 	// Close the SSH server.
 	sshServer.Stop()
 
-	logger.Println("Terminating process")
+	logman.Println("Terminating process")
 }
-
