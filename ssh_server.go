@@ -264,7 +264,8 @@ func (server *SSHServer) Stop() {
 }
 
 // GetSSHSockaddr : Returns the socket address of an SSH client
-//                  (https://golang.org/pkg/syscall/#Sockaddr).
+//
+//	(https://golang.org/pkg/syscall/#Sockaddr).
 func GetSSHSockaddr(session C.ssh_session) *syscall.Sockaddr {
 	sockFd := int(C.ssh_get_fd(session))
 	sock, err := syscall.Getpeername(sockFd)
