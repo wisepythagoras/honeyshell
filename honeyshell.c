@@ -48,15 +48,7 @@ static int auth_password(ssh_session session, const char *user,
 
     (void) session;
 
-    password_auth_attempt_msg msg = {
-        .user = user,
-        .pass = pass,
-        .session = session
-    };
-
-    push_password_msg(sdata->queue, &msg);
-
-    char poll_msg[256];
+    char poll_msg[512];
     sprintf(poll_msg, "[\"%s\",\"%s\"]", user, pass);
     write(sdata->queue->chan[1], poll_msg, sizeof(char[256]));
 
@@ -66,14 +58,12 @@ static int auth_password(ssh_session session, const char *user,
     //     return SSH_AUTH_SUCCESS;
     // }
 
-    printf("%s - %s\n", msg.user, msg.pass);
-
     sdata->auth_attempts++;
 
     return SSH_AUTH_DENIED;
 }
 
-void handle_auth(ssh_session session, password_queue *pqueue) {
+void handle_auth(ssh_session session, auth_queue *pqueue) {
     struct session_data_struct sdata = {
         .channel = NULL,
         .auth_attempts = 0,

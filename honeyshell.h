@@ -44,33 +44,25 @@ struct password_auth_attempt_msg_struct {
 };
 typedef struct password_auth_attempt_msg_struct password_auth_attempt_msg;
 
-typedef struct password_queue_node_struct {
-    struct password_queue_node_struct *next_node;
-    password_auth_attempt_msg *msg;
-} password_queue_node;
-
-typedef struct password_queue_struct {
-    password_queue_node *first;
-    password_queue_node *last;
-    int count;
+typedef struct queue_struct {
     int chan[2];
-} password_queue;
+} auth_queue;
 
 struct session_data_struct {
     ssh_channel channel;
     int auth_attempts;
     int authenticated;
-    password_queue *queue;
+    auth_queue *queue;
 };
 
 const char *get_ssh_key_type(const ssh_key key);
 
-void handle_auth(ssh_session session, password_queue *pqueue);
+void handle_auth(ssh_session session, auth_queue *pqueue);
 
-password_queue create_password_queue();
-char *wait_for_password(password_queue *queue);
-void push_password_msg(password_queue *queue, password_auth_attempt_msg *msg);
-password_auth_attempt_msg *get_password_msg(password_queue *queue);
-int is_password_queue_empty(password_queue *queue);
+auth_queue create_auth_queue();
+char *wait_for_creds(auth_queue *queue);
+void push_password_msg(auth_queue *queue, password_auth_attempt_msg *msg);
+password_auth_attempt_msg *get_password_msg(auth_queue *queue);
+int is_password_queue_empty(auth_queue *queue);
 
 #endif

@@ -6,6 +6,7 @@ package main
 import "C"
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"syscall"
@@ -92,23 +93,25 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 	log.Println(ip.String(), port, "connection request")
 	logman.Println(ip.String(), port, "connection request")
 
-	password_queue := C.create_password_queue()
-	fmt.Println(password_queue)
+	password_queue := C.create_auth_queue()
 
 	go func() {
 		for {
-			// if C.is_password_queue_empty(&password_queue) == 1 {
-			// 	continue
-			// }
+			cStr := C.wait_for_creds(&password_queue)
 
-			// if msg := C.get_password_msg(&password_queue); msg != nil {
-			// 	fmt.Println("Get message") //fmt.Println("->", msg)
-			// }
+			if msg := C.GoString(cStr); len(msg) > 0 {
+				var parts []string
+				err := json.Unmarshal([]byte(msg), &parts)
 
-			msg := C.wait_for_password(&password_queue)
+				if err != nil {
+					fmt.Println("Error:", err, msg)
+					continue
+				}
 
-			if msg != nil {
-				fmt.Println("->", msg)
+				logman.Printf("%s %s pass:%s\n", ip.String(), parts[0], parts[1])
+				log.Printf("%s %s pass:%s\n", ip.String(), parts[0], parts[1])
+				// } else {
+				// 	fmt.Println("I don't know what happened")
 			}
 		}
 	}()

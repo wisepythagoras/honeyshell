@@ -11,7 +11,7 @@ int wait_n_read(int fd, char *buf) {
 
     poll(&pfd, 1, -1);
 
-    int ret = read(fd, buf, sizeof(char[256]) - 1);
+    int ret = read(fd, buf, sizeof(char[512]) - 1);
 
     if (ret == -1) {
         perror("In read()");
@@ -20,8 +20,8 @@ int wait_n_read(int fd, char *buf) {
     return ret;
 }
 
-char *wait_for_password(password_queue *queue) {
-    char *val = malloc(sizeof(char) * 256);
+char *wait_for_creds(auth_queue *queue) {
+    char *val = malloc(sizeof(char) * 512);
 
     if (wait_n_read(queue->chan[0], val) == -1) {
         return NULL;
@@ -30,55 +30,10 @@ char *wait_for_password(password_queue *queue) {
     return val;
 }
 
-password_queue create_password_queue() {
-    password_queue queue = {
-        .first = NULL,
-        .last = NULL,
-        .count = 0,
+auth_queue create_auth_queue() {
+    auth_queue queue = {
         .chan = {0, 0}
     };
 
     return queue;
-}
-
-int is_password_queue_empty(password_queue *queue) {
-    return queue->count == 0; // queue->first == NULL && queue->last == NULL;
-}
-
-void push_password_msg(password_queue *queue, password_auth_attempt_msg *msg) {
-    if (queue == NULL) {
-        return;
-    }
-
-    password_queue_node new_node = {
-        .msg = msg
-    };
-
-    queue->count++;
-
-    if (queue->last == NULL || queue->count == 1) {
-        queue->last = &new_node;
-        queue->first = &new_node;
-        return;
-    }
-
-    queue->last->next_node = &new_node;
-    queue->last = &new_node;
-}
-
-password_auth_attempt_msg *get_password_msg(password_queue *queue) {
-    if (queue->first == NULL || queue->count == 0) {
-        return NULL;
-    }
-
-    queue->count--;
-
-    password_auth_attempt_msg *msg = queue->first->msg;
-    queue->first = queue->first->next_node;
-
-    if (queue->first == NULL || queue->count == 0) {
-        queue->last = NULL;
-    }
-
-    return msg;
 }
