@@ -2,6 +2,17 @@
 #include <poll.h>
 #include "./honeyshell.h"
 
+struct session_data_struct create_session_data_struct() {
+    struct session_data_struct sdata = {
+        .channel = NULL,
+        .auth_attempts = 0,
+        .authenticated = 0,
+        .chan = {0, 0}
+    };
+
+    return sdata;
+}
+
 const char *get_ssh_key_type(const ssh_key key) {
 	if (key == NULL) {
 		return NULL;
@@ -48,17 +59,10 @@ static int auth_password(ssh_session session, const char *user,
 
     (void) session;
 
-    password_auth_attempt_msg msg = {
-        .user = user,
-        .pass = pass,
-        .session = session
-    };
+    char message[256];
 
-    push_password_msg(sdata->queue, &msg);
-
-    // char poll_msg[4];
-    // sprintf(poll_msg, "%i", sdata->auth_attempts);
-    write(sdata->queue->chan[1], &sdata->auth_attempts, sizeof(int));
+    sprintf(message, "[\"%s\",\"%s\"]", user, pass);
+    write(sdata->chan[WRITE_FD], message, sizeof(char[256]));
 
     // Use logic like this to trick bots into thinking they've authenticated.
     // if (strcmp(user, username) == 0 && strcmp(pass, password) == 0) {
@@ -66,22 +70,17 @@ static int auth_password(ssh_session session, const char *user,
     //     return SSH_AUTH_SUCCESS;
     // }
 
-    printf("%s - %s\n", msg.user, msg.pass);
+    printf("%s - %s (%s)\n", user, pass, message);
 
     sdata->auth_attempts++;
 
     return SSH_AUTH_DENIED;
 }
 
-void handle_auth(ssh_session session, password_queue *pqueue) {
-    struct session_data_struct sdata = {
-        .channel = NULL,
-        .auth_attempts = 0,
-        .authenticated = 0,
-        .queue = pqueue
-    };
-
-    pipe(&pqueue->chan[0]);
+void handle_auth(ssh_session session, struct session_data_struct *sdata) {
+    if (pipe(&sdata->chan[READ_FD]) == -1) {
+        printf("Unable to pipe\n");
+    }
 
     struct ssh_server_callbacks_struct server_cb = {
         .userdata = &sdata,
@@ -104,8 +103,8 @@ void handle_auth(ssh_session session, password_queue *pqueue) {
 
     int n = 0;
 
-    while (sdata.authenticated == 0 || sdata.channel == NULL) {
-        if (sdata.auth_attempts >= 3 || n >= 10 * 100) {
+    while (sdata->authenticated == 0 || sdata->channel == NULL) {
+        if (sdata->auth_attempts >= 3 || n >= 10 * 100) {
             return;
         }
 
@@ -119,12 +118,13 @@ void handle_auth(ssh_session session, password_queue *pqueue) {
         n++;
     }
 
-    ssh_channel_send_eof(sdata.channel);
-    ssh_channel_close(sdata.channel);
+    ssh_channel_send_eof(sdata->channel);
+    ssh_channel_close(sdata->channel);
 
     for (n = 0; n < 50 && (ssh_get_status(session) & (SSH_CLOSED | SSH_CLOSED_ERROR)) == 0; n++) {
         ssh_event_dopoll(event, 100);
     }
 
-    pqueue = NULL;
+    close(sdata->chan[READ_FD]);
+    close(sdata->chan[WRITE_FD]);
 }

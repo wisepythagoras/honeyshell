@@ -92,24 +92,28 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 	log.Println(ip.String(), port, "connection request")
 	logman.Println(ip.String(), port, "connection request")
 
-	password_queue := C.create_password_queue()
-	fmt.Println(password_queue)
+	// password_queue := C.create_password_queue()
+	// fmt.Println(password_queue)
+	sdata := C.create_session_data_struct()
 
 	go func() {
 		for {
-			if C.is_password_queue_empty(&password_queue) == 1 {
-				continue
-			}
+			// if C.is_password_queue_empty(&password_queue) == 1 {
+			// 	continue
+			// }
 
-			if msg := C.get_password_msg(&password_queue); msg != nil {
-				fmt.Println("->", msg)
-			}
+			// fmt.Println("Wait", password_queue.first)
+			// if msg := C.get_password_msg(&password_queue); msg != nil {
+			// 	fmt.Println("->", msg)
+			// }
 
-			// fmt.Println("Here")
-			// msg := C.wait_for_password(&password_queue)
-			// fmt.Println("Here", msg)
+			// --
 
-			// if msg != nil {
+			fmt.Println("Wait", sdata)
+			res := C.wait_for_password(&sdata)
+			fmt.Println("Here", res)
+
+			// if msg := C.get_password_msg(&password_queue); msg.session != nil {
 			// 	fmt.Println("->", msg)
 			// }
 		}
@@ -117,7 +121,7 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 
 	// Set how we want to allow peers to connect.
 	C.ssh_set_auth_methods(*session, authMethods)
-	C.handle_auth(*session, &password_queue)
+	C.handle_auth(*session, &sdata)
 
 	// Handle the key exchange.
 	if C.ssh_handle_key_exchange(*session) != C.SSH_OK {
