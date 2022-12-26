@@ -1,52 +1,12 @@
 package main
 
 /*
-#include <stdlib.h>
-#include <pwd.h>
-#include <sys/types.h>
-#include <grp.h>
-#include <inttypes.h>
-#include <sys/types.h>
-#include <libssh/libssh.h>
-#include <libssh/server.h>
-
-struct ssh_key_struct {
-    enum ssh_keytypes_e type;
-    int flags;
-    const char *type_c;
-	int ecdsa_nid;
-#if defined(HAVE_LIBGCRYPT)
-    gcry_sexp_t dsa;
-    gcry_sexp_t rsa;
-    gcry_sexp_t ecdsa;
-#elif defined(HAVE_LIBMBEDCRYPTO)
-    mbedtls_pk_context *rsa;
-    mbedtls_ecdsa_context *ecdsa;
-    void *dsa;
-#elif defined(HAVE_LIBCRYPTO)
-    DSA *dsa;
-    RSA *rsa;
-# if defined(HAVE_OPENSSL_ECC)
-    EC_KEY *ecdsa;
-# else
-    void *ecdsa;
-# endif
-#endif
-    void *cert;
-    enum ssh_keytypes_e cert_type;
-};
-
-const char *get_ssh_key_type(const ssh_key key) {
-	if (key == NULL) {
-		return NULL;
-	}
-
-	return key->type_c;
-}
+#include "./honeyshell.h"
 */
 import "C"
 
 import (
+	"fmt"
 	"log"
 	"syscall"
 	"unsafe"
@@ -132,8 +92,32 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 	log.Println(ip.String(), port, "connection request")
 	logman.Println(ip.String(), port, "connection request")
 
+	password_queue := C.create_password_queue()
+	fmt.Println(password_queue)
+
+	go func() {
+		for {
+			if C.is_password_queue_empty(&password_queue) == 1 {
+				continue
+			}
+
+			if msg := C.get_password_msg(&password_queue); msg != nil {
+				fmt.Println("->", msg)
+			}
+
+			// fmt.Println("Here")
+			// msg := C.wait_for_password(&password_queue)
+			// fmt.Println("Here", msg)
+
+			// if msg != nil {
+			// 	fmt.Println("->", msg)
+			// }
+		}
+	}()
+
 	// Set how we want to allow peers to connect.
 	C.ssh_set_auth_methods(*session, authMethods)
+	C.handle_auth(*session, &password_queue)
 
 	// Handle the key exchange.
 	if C.ssh_handle_key_exchange(*session) != C.SSH_OK {
@@ -154,6 +138,7 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 	logman.Println(ip.String(), port, "client connected with", clientBanner)
 
 	for {
+		break
 		// Receive the message from the client.
 		message := C.ssh_message_get(*session)
 
@@ -167,17 +152,17 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 		// If the attacker is submitting an authentication message, then we need to read
 		// it and output the data that they entered.
 		if messageType == C.SSH_AUTH_METHOD_PASSWORD {
-			password := C.GoString(C.ssh_message_auth_password(message))
+			// password := C.GoString(C.ssh_message_auth_password(message))
 
-			// Add the password to the database.
-			server.db.Create(&PasswordConnection{
-				IPAddress: ip.String(),
-				Username:  username,
-				Password:  password,
-			})
+			// // Add the password to the database.
+			// server.db.Create(&PasswordConnection{
+			// 	IPAddress: ip.String(),
+			// 	Username:  username,
+			// 	Password:  password,
+			// })
 
-			logman.Printf("%s %s pass:%s\n", ip.String(), username, password)
-			log.Printf("%s %s pass:%s\n", ip.String(), username, password)
+			// logman.Printf("%s %s pass:%s\n", ip.String(), username, password)
+			// log.Printf("%s %s pass:%s\n", ip.String(), username, password)
 		} else if messageType == C.SSH_AUTH_METHOD_PUBLICKEY {
 			// Get the user's auth key. This may not be that helpful, but I think it may
 			// be interesting to capture some keys from those who are not careful.

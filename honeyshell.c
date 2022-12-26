@@ -1,0 +1,130 @@
+#include <stdio.h>
+#include <poll.h>
+#include "./honeyshell.h"
+
+const char *get_ssh_key_type(const ssh_key key) {
+	if (key == NULL) {
+		return NULL;
+	}
+
+	return key->type_c;
+}
+
+static ssh_channel channel_open(ssh_session session, void *userdata) {
+    struct session_data_struct *sdata = (struct session_data_struct *) userdata;
+
+    sdata->channel = ssh_channel_new(session);
+    return sdata->channel;
+}
+
+static int auth_publickey(ssh_session session,
+                          const char *user,
+                          struct ssh_key_struct *pubkey,
+                          char signature_state,
+                          void *userdata)
+{
+    struct session_data_struct *sdata = (struct session_data_struct *) userdata;
+
+    (void) user;
+    (void) session;
+
+    // States include:
+    // - SSH_PUBLICKEY_STATE_NONE
+    // - SSH_PUBLICKEY_STATE_VALID
+    //
+    // Response types:
+    // - SSH_AUTH_SUCCESS
+    // - SSH_AUTH_DENIED
+
+    // We don't actually want to accept any key here, we only want to log them.
+    sdata->authenticated = 0;
+
+    return SSH_AUTH_DENIED;
+}
+
+static int auth_password(ssh_session session, const char *user,
+                         const char *pass, void *userdata) {
+    struct session_data_struct *sdata = (struct session_data_struct *) userdata;
+
+    (void) session;
+
+    password_auth_attempt_msg msg = {
+        .user = user,
+        .pass = pass,
+        .session = session
+    };
+
+    push_password_msg(sdata->queue, &msg);
+
+    // char poll_msg[4];
+    // sprintf(poll_msg, "%i", sdata->auth_attempts);
+    write(sdata->queue->chan[1], &sdata->auth_attempts, sizeof(int));
+
+    // Use logic like this to trick bots into thinking they've authenticated.
+    // if (strcmp(user, username) == 0 && strcmp(pass, password) == 0) {
+    //     sdata->authenticated = 1;
+    //     return SSH_AUTH_SUCCESS;
+    // }
+
+    printf("%s - %s\n", msg.user, msg.pass);
+
+    sdata->auth_attempts++;
+
+    return SSH_AUTH_DENIED;
+}
+
+void handle_auth(ssh_session session, password_queue *pqueue) {
+    struct session_data_struct sdata = {
+        .channel = NULL,
+        .auth_attempts = 0,
+        .authenticated = 0,
+        .queue = pqueue
+    };
+
+    pipe(&pqueue->chan[0]);
+
+    struct ssh_server_callbacks_struct server_cb = {
+        .userdata = &sdata,
+        .auth_password_function = auth_password,
+        .channel_open_request_session_function = channel_open,
+        .auth_pubkey_function = auth_publickey
+    };
+
+    ssh_callbacks_init(&server_cb);
+    ssh_set_server_callbacks(session, &server_cb);
+
+    if (ssh_handle_key_exchange(session) != SSH_OK) {
+        fprintf(stderr, "%s\n", ssh_get_error(session));
+        return;
+    }
+
+    ssh_event event = ssh_event_new();
+
+    ssh_event_add_session(event, session);
+
+    int n = 0;
+
+    while (sdata.authenticated == 0 || sdata.channel == NULL) {
+        if (sdata.auth_attempts >= 3 || n >= 10 * 100) {
+            return;
+        }
+
+        int res = ssh_event_dopoll(event, 100);
+
+        if (res == SSH_ERROR) {
+            fprintf(stderr, "%s\n", ssh_get_error(session));
+            return;
+        }
+
+        n++;
+    }
+
+    ssh_channel_send_eof(sdata.channel);
+    ssh_channel_close(sdata.channel);
+
+    for (n = 0; n < 50 && (ssh_get_status(session) & (SSH_CLOSED | SSH_CLOSED_ERROR)) == 0; n++) {
+        ssh_event_dopoll(event, 100);
+    }
+
+    pqueue = NULL;
+}
