@@ -1,6 +1,24 @@
 #include <stdio.h>
 #include <poll.h>
+#include <ctype.h>
 #include "./honeyshell.h"
+
+char *escape(char *str) {
+    char *escaped = malloc(sizeof(char) * strlen(str) * 2);
+    memset(escaped, 0, strlen(str) * 2);
+
+    for (int i = 0; i < strlen(str); i++) {
+        if (str[i] == '\\') {
+            strcat(escaped, "\\\\");
+        } else if (str[i] == '"') {
+            strcat(escaped, "\\\"");
+        } else {
+            sprintf(escaped, "%s%c", escaped, str[i]);
+        }
+    }
+
+    return escaped;
+}
 
 const char *get_ssh_key_type(const ssh_key key) {
 	if (key == NULL) {
@@ -51,7 +69,7 @@ static int auth_password(ssh_session session, const char *user,
     sdata->auth_attempts++;
 
     char poll_msg[512];
-    sprintf(poll_msg, "[\"%s\",\"%s\",\"%i\"]", user, pass, sdata->auth_attempts);
+    sprintf(poll_msg, "[\"%s\",\"%s\",\"%i\"]", escape((char *) user), escape((char *) pass), sdata->auth_attempts);
     write(sdata->queue->chan[1], poll_msg, sizeof(char[256]));
 
     // Use logic like this to trick bots into thinking they've authenticated.
