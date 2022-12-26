@@ -68,7 +68,7 @@ const char *get_ssh_key_type(const ssh_key key);
 void handle_auth(ssh_session session, password_queue *pqueue);
 
 password_queue create_password_queue();
-password_auth_attempt_msg *wait_for_password(password_queue *queue);
+char *wait_for_password(password_queue *queue);
 void push_password_msg(password_queue *queue, password_auth_attempt_msg *msg);
 password_auth_attempt_msg *get_password_msg(password_queue *queue);
 int is_password_queue_empty(password_queue *queue);

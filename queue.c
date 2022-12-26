@@ -20,16 +20,14 @@ int wait_n_read(int fd, char *buf) {
     return ret;
 }
 
-password_auth_attempt_msg *wait_for_password(password_queue *queue) {
+char *wait_for_password(password_queue *queue) {
     char *val = malloc(sizeof(char) * 256);
 
     if (wait_n_read(queue->chan[0], val) == -1) {
         return NULL;
     }
 
-    printf("-> %s\n", val);
-
-    return NULL;
+    return val;
 }
 
 password_queue create_password_queue() {
