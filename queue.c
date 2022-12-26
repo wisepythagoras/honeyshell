@@ -2,7 +2,7 @@
 #include <poll.h>
 #include "./honeyshell.h"
 
-int wait_n_read(int fd, int *buf) {
+int wait_n_read(int fd, char *buf) {
     struct pollfd pfd = {
         .fd      = fd,
         .events  = POLLIN,
@@ -11,7 +11,7 @@ int wait_n_read(int fd, int *buf) {
 
     poll(&pfd, 1, -1);
 
-    int ret = read(fd, buf, sizeof(int));
+    int ret = read(fd, buf, sizeof(char[256]) - 1);
 
     if (ret == -1) {
         perror("In read()");
@@ -21,15 +21,15 @@ int wait_n_read(int fd, int *buf) {
 }
 
 password_auth_attempt_msg *wait_for_password(password_queue *queue) {
-    int val = -1;
+    char *val = malloc(sizeof(char) * 256);
 
-    if (wait_n_read(queue->chan[0], &val) == -1) {
+    if (wait_n_read(queue->chan[0], val) == -1) {
         return NULL;
     }
 
-    password_auth_attempt_msg *msg = get_password_msg(queue);
-    printf("%i\n", msg);
-    return msg;
+    printf("-> %s\n", val);
+
+    return NULL;
 }
 
 password_queue create_password_queue() {
@@ -69,19 +69,15 @@ void push_password_msg(password_queue *queue, password_auth_attempt_msg *msg) {
 }
 
 password_auth_attempt_msg *get_password_msg(password_queue *queue) {
-printf("1\n");
     if (queue->first == NULL || queue->count == 0) {
-printf("2\n");
         return NULL;
     }
 
     queue->count--;
 
-printf("3\n");
     password_auth_attempt_msg *msg = queue->first->msg;
     queue->first = queue->first->next_node;
 
-printf("4 @%i\n", msg);
     if (queue->first == NULL || queue->count == 0) {
         queue->last = NULL;
     }

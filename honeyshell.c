@@ -56,9 +56,9 @@ static int auth_password(ssh_session session, const char *user,
 
     push_password_msg(sdata->queue, &msg);
 
-    // char poll_msg[4];
-    // sprintf(poll_msg, "%i", sdata->auth_attempts);
-    write(sdata->queue->chan[1], &sdata->auth_attempts, sizeof(int));
+    char poll_msg[256];
+    sprintf(poll_msg, "[\"%s\",\"%s\"]", user, pass);
+    write(sdata->queue->chan[1], poll_msg, sizeof(char[256])); // &sdata->auth_attempts, sizeof(int));
 
     // Use logic like this to trick bots into thinking they've authenticated.
     // if (strcmp(user, username) == 0 && strcmp(pass, password) == 0) {

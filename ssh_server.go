@@ -97,21 +97,19 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 
 	go func() {
 		for {
-			if C.is_password_queue_empty(&password_queue) == 1 {
-				continue
-			}
+			// if C.is_password_queue_empty(&password_queue) == 1 {
+			// 	continue
+			// }
 
-			if msg := C.get_password_msg(&password_queue); msg != nil {
+			// if msg := C.get_password_msg(&password_queue); msg != nil {
+			// 	fmt.Println("Get message") //fmt.Println("->", msg)
+			// }
+
+			msg := C.wait_for_password(&password_queue)
+
+			if msg != nil {
 				fmt.Println("->", msg)
 			}
-
-			// fmt.Println("Here")
-			// msg := C.wait_for_password(&password_queue)
-			// fmt.Println("Here", msg)
-
-			// if msg != nil {
-			// 	fmt.Println("->", msg)
-			// }
 		}
 	}()
 
