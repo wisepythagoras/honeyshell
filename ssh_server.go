@@ -110,6 +110,10 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 
 				logman.Printf("%s %s pass:%s\n", ip.String(), parts[0], parts[1])
 				log.Printf("%s %s pass:%s\n", ip.String(), parts[0], parts[1])
+
+				if parts[2] == "3" {
+					break
+				}
 				// } else {
 				// 	fmt.Println("I don't know what happened")
 			}
