@@ -61,8 +61,5 @@ void handle_auth(ssh_session session, auth_queue *pqueue);
 
 auth_queue create_auth_queue();
 char *wait_for_creds(auth_queue *queue);
-void push_password_msg(auth_queue *queue, password_auth_attempt_msg *msg);
-password_auth_attempt_msg *get_password_msg(auth_queue *queue);
-int is_password_queue_empty(auth_queue *queue);
 
 #endif
