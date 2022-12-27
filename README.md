@@ -4,6 +4,8 @@ An SSH honeypot written entirely in Go, using `crypto/ssh` as its base.
 
 Currently, it allows connections on the server and collects failed login attempts, meaning all usernames and passwords. Also, you can decrease the permissions on the process by flipping to a different user (ie 'nobody').
 
+A version running [libssh](https://www.libssh.org/) can be found in the [legacy](https://github.com/wisepythagoras/honeyshell/tree/legacy) branch. It has been tested up to version `0.10` of the library. Two functions that it's using have been deprecated and I was trying to get rid of them with the work on the [c-branch](https://github.com/wisepythagoras/honeyshell/tree/c-branch) branch. The code on `c-branch` hasn't been fully tested and is buggy, because the libssh team decided to swittch to a callback model and I had to improvise on how to get it to work with Go.
+
 ## Building
 
 To compile the program, simply run `go build` in your terminal.
