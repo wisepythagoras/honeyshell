@@ -93,18 +93,18 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 	log.Println(ip.String(), port, "connection request")
 	logman.Println(ip.String(), port, "connection request")
 
-	password_queue := C.create_auth_queue()
+	passwordQueue := C.create_auth_queue()
 
 	go func() {
 		for {
-			cStr := C.wait_for_creds(&password_queue)
+			cStr := C.wait_for_creds(&passwordQueue)
 
-			if msg := C.GoString(cStr); len(msg) > 0 {
+			if msg := C.GoString(cStr); len(msg) > 11 {
 				var parts []string
 				err := json.Unmarshal([]byte(msg), &parts)
 
 				if err != nil {
-					fmt.Println("Error:", err, msg)
+					fmt.Println("Error:", err, "-", msg)
 					continue
 				}
 
@@ -114,15 +114,19 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 				if parts[2] == "3" {
 					break
 				}
-				// } else {
-				// 	fmt.Println("I don't know what happened")
 			}
 		}
 	}()
 
 	// Set how we want to allow peers to connect.
 	C.ssh_set_auth_methods(*session, authMethods)
-	C.handle_auth(*session, &password_queue)
+	C.handle_auth(*session, &passwordQueue)
+
+	// Get the client's SSH banner. This can give us some useful information as to what
+	// software the attacker is running.
+	clientBanner := C.GoString(C.ssh_get_clientbanner(*session))
+	log.Println(ip.String(), port, "client connection ended with", clientBanner)
+	logman.Println(ip.String(), port, "client connection ended with", clientBanner)
 
 	// Handle the key exchange.
 	if C.ssh_handle_key_exchange(*session) != C.SSH_OK {
@@ -135,12 +139,6 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 
 		return false
 	}
-
-	// Get the client's SSH banner. This can give us some useful information as to what
-	// software the attacker is running.
-	clientBanner := C.GoString(C.ssh_get_clientbanner(*session))
-	log.Println(ip.String(), port, "client connected with", clientBanner)
-	logman.Println(ip.String(), port, "client connected with", clientBanner)
 
 	for {
 		break

@@ -2,7 +2,7 @@
 #include <poll.h>
 #include "./honeyshell.h"
 
-int wait_n_read(int fd, char *buf) {
+void poll_queue(int fd) {
     struct pollfd pfd = {
         .fd      = fd,
         .events  = POLLIN,
@@ -10,20 +10,40 @@ int wait_n_read(int fd, char *buf) {
     };
 
     poll(&pfd, 1, -1);
+}
 
-    int ret = read(fd, buf, sizeof(char[512]) - 1);
+int wait_read_size(int fd, int *buf) {
+    poll_queue(fd);
+
+    int ret = read(fd, buf, sizeof(int));
 
     if (ret == -1) {
         perror("In read()");
     }
 
-    return ret;
+    return 1;
+}
+
+int wait_read_json(int fd, char *buf, int size) {
+    poll_queue(fd);
+
+    int ret = read(fd, buf, (sizeof(char) * size) + 1);
+
+    if (ret == -1) {
+        perror("In read()");
+    }
+
+    return 1;
 }
 
 char *wait_for_creds(auth_queue *queue) {
-    char *val = malloc(sizeof(char) * 512);
+    int size = 0;
 
-    if (wait_n_read(queue->chan[0], val) == -1) {
+    wait_read_size(queue->chan[0], &size);
+
+    char *val = malloc(sizeof(char) * size);
+
+    if (wait_read_json(queue->chan[0], val, size) == -1) {
         return NULL;
     }
 
