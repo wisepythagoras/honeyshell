@@ -27,9 +27,7 @@ func (server *SSHServer) Init() bool {
 		PasswordCallback:  server.PasswordChecker,
 		PublicKeyCallback: server.PublicKeyChecker,
 		ServerVersion:     server.banner,
-		AuthLogCallback: func(c ssh.ConnMetadata, method string, err error) {
-			// fmt.Println(c.User(), string(c.ClientVersion()), method, err)
-		},
+		AuthLogCallback:   server.AuthLogHandler,
 	}
 
 	// Now read the server's private key.
@@ -64,6 +62,16 @@ func (server *SSHServer) Init() bool {
 	logman.Println("Starting on port", server.port)
 
 	return true
+}
+
+func (server *SSHServer) AuthLogHandler(c ssh.ConnMetadata, method string, err error) {
+	if method == "none" {
+		ip := c.RemoteAddr()
+		clientBanner := string(c.ClientVersion())
+
+		log.Println(ip.String(), "client connected with", clientBanner, "for user", c.User())
+		logman.Println(ip.String(), "client connected with", clientBanner, "for user", c.User())
+	}
 }
 
 // PasswordChecker will take the connection metadata and password that was used and log it along with
