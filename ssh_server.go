@@ -1,113 +1,135 @@
 package main
 
-/*
-#include <stdlib.h>
-#include <pwd.h>
-#include <sys/types.h>
-#include <grp.h>
-#include <inttypes.h>
-#include <sys/types.h>
-#include <libssh/libssh.h>
-#include <libssh/server.h>
-
-struct ssh_key_struct {
-    enum ssh_keytypes_e type;
-    int flags;
-    const char *type_c;
-	int ecdsa_nid;
-#if defined(HAVE_LIBGCRYPT)
-    gcry_sexp_t dsa;
-    gcry_sexp_t rsa;
-    gcry_sexp_t ecdsa;
-#elif defined(HAVE_LIBMBEDCRYPTO)
-    mbedtls_pk_context *rsa;
-    mbedtls_ecdsa_context *ecdsa;
-    void *dsa;
-#elif defined(HAVE_LIBCRYPTO)
-    DSA *dsa;
-    RSA *rsa;
-# if defined(HAVE_OPENSSL_ECC)
-    EC_KEY *ecdsa;
-# else
-    void *ecdsa;
-# endif
-#endif
-    void *cert;
-    enum ssh_keytypes_e cert_type;
-};
-
-const char *get_ssh_key_type(const ssh_key key) {
-	if (key == NULL) {
-		return NULL;
-	}
-
-	return key->type_c;
-}
-*/
-import "C"
-
 import (
+	"fmt"
 	"log"
-	"syscall"
-	"unsafe"
+	"net"
+	"os"
 
+	"golang.org/x/crypto/ssh"
 	"gorm.io/gorm"
 )
 
 // SSHServer : This is the object that defines an SSH server.
 type SSHServer struct {
-	db      *gorm.DB
-	port    int
-	address string
-	key     string
-	banner  string
-	sshbind C.ssh_bind
+	db       *gorm.DB
+	port     int
+	address  string
+	key      string
+	banner   string
+	config   *ssh.ServerConfig
+	listener net.Listener
 }
 
-// Init : Initialize the SSH server.
+// Init Initialize the SSH server.
 func (server *SSHServer) Init() bool {
-	// Start the SSH server here.
-	C.ssh_init()
+	server.config = &ssh.ServerConfig{
+		PasswordCallback:  server.passwordChecker,
+		PublicKeyCallback: server.publicKeyChecker,
+		ServerVersion:     server.banner,
+		AuthLogCallback:   server.authLogHandler,
+	}
 
-	// Create a new SSH binder.
-	server.sshbind = C.ssh_bind_new()
+	// Now read the server's private key.
+	privateKeyBytes, err := os.ReadFile(server.key)
 
-	// Convert some settings to unsafe pointers so that they can be used within our
-	// C functions.
-	address := unsafe.Pointer(C.CString(server.address))
-	portC := unsafe.Pointer(&server.port)
-	banner := unsafe.Pointer(C.CString(server.banner))
-	rsaKey := unsafe.Pointer(C.CString(server.key))
+	if err != nil {
+		log.Println("Failed to load private key", err)
+		logman.Println("Failed to load private key", err)
+		return false
+	}
 
-	// Set the bind options.
-	C.ssh_bind_options_set(server.sshbind, C.SSH_BIND_OPTIONS_BINDADDR, address)
-	C.ssh_bind_options_set(server.sshbind, C.SSH_BIND_OPTIONS_BINDPORT, portC)
-	C.ssh_bind_options_set(server.sshbind, C.SSH_BIND_OPTIONS_BANNER, banner)
-	C.ssh_bind_options_set(server.sshbind, C.SSH_BIND_OPTIONS_RSAKEY, rsaKey)
+	privateKey, err := ssh.ParsePrivateKey(privateKeyBytes)
 
-	// If the database object is passed to the constructor / intializer of the SSHServer, Go returns
-	// the following error. Figure it out.
-	//
-	// panic: runtime error: cgo argument has Go pointer to Go pointer
-	// goroutine 1 [running]:
-	// main.(*SSHServer).Init.func2(0xc000243180, 0xc000243180, 0x0)
-	// 	/home/diogenis/Projects/honeyshell/ssh_server.go:84 +0x6e
-	// main.(*SSHServer).Init(0xc000243180, 0xc000243180)
-	// 	/home/diogenis/Projects/honeyshell/ssh_server.go:84 +0xe5
-	// main.main()
-	// 	/home/diogenis/Projects/honeyshell/main.go:55 +0x345
+	if err != nil {
+		log.Println("Failed to parse private key", err)
+		logman.Println("Failed to parse private key", err)
+		return false
+	}
+
+	server.config.AddHostKey(privateKey)
+
+	// Listen on the provided port.
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", server.port))
+	server.listener = listener
+
+	if err != nil {
+		log.Println("Unable to listen on the provided port", err)
+		logman.Println("Unable to listen on the provided port", err)
+	}
 
 	log.Println("Starting on port", server.port)
 	logman.Println("Starting on port", server.port)
 
-	// Try to start listening on the given port.
-	if int(C.ssh_bind_listen(server.sshbind)) < 0 {
-		log.Println("Error binding:", C.GoString(C.ssh_get_error(unsafe.Pointer(server.sshbind))))
-		logman.Println("Error binding:", C.GoString(C.ssh_get_error(unsafe.Pointer(server.sshbind))))
-		return false
-	}
-
 	return true
+}
+
+// authLogHandler is meant to just display when a user connects.
+func (server *SSHServer) authLogHandler(c ssh.ConnMetadata, method string, err error) {
+	if method == "none" {
+		ip := c.RemoteAddr()
+		clientBanner := string(c.ClientVersion())
+
+		log.Println(ip.String(), "client connected with", clientBanner, "for user", c.User())
+		logman.Println(ip.String(), "client connected with", clientBanner, "for user", c.User())
+	}
+}
+
+// passwordChecker will take the connection metadata and password that was used and log it along with
+// other needed information to both the log file/stdout and database.
+func (server *SSHServer) passwordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
+	ip := c.RemoteAddr()
+	username := c.User()
+	password := string(pass)
+
+	// Add the password to the database.
+	server.db.Create(&PasswordConnection{
+		IPAddress: ip.String(),
+		Username:  username,
+		Password:  password,
+	}).Commit()
+
+	logman.Printf("%s %s pass:%s\n", ip.String(), username, password)
+	log.Printf("%s %s pass:%s\n", ip.String(), username, password)
+
+	// This is where and how I'd ideally add logic to mock logins and trap bad bots.
+	// if c.User() == "admin" && string(pass) == "admin" {
+	// 	return nil, nil
+	// }
+
+	return nil, fmt.Errorf("incorrect password for %q", c.User())
+}
+
+// publicKeyChecker handles any attempt to send a public key. This could be especially helpful when monitoring
+// the keys of your organization. If you see a strange IP using it, it's been compromised.
+func (server *SSHServer) publicKeyChecker(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
+	ip := c.RemoteAddr()
+	username := c.User()
+
+	// Now we get the SHA3-256 hash of the public key, because it may be too long
+	// to display on the screen.
+	pubKeyHash, _ := GetSHA3256Hash(pubKey.Marshal())
+
+	logman.Printf("%s %s key:%s (%s)\n",
+		ip.String(),
+		username,
+		ByteArrayToHex(pubKeyHash),
+		pubKey.Type())
+	log.Printf("%s %s key:%s (%s)\n",
+		ip.String(),
+		username,
+		ByteArrayToHex(pubKeyHash),
+		pubKey.Type())
+
+	// Add the key to the database.
+	server.db.Create(&KeyConnection{
+		IPAddress: ip.String(),
+		Username:  username,
+		Key:       string(pubKey.Marshal()),
+		KeyHash:   ByteArrayToHex(pubKeyHash),
+	}).Commit()
+
+	return nil, fmt.Errorf("unknown public key for %q", c.User())
 }
 
 // SetDB sets the database. For some reason this can't be passed in the constructor / initializer,
@@ -116,121 +138,28 @@ func (server *SSHServer) SetDB(db *gorm.DB) {
 	server.db = db
 }
 
-// HandleSSHAuth : Handles the authentication process.
-func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
-	// Get the IP of the client that's connected.
-	ip, port, _ := SockAddrToIP(GetSSHSockaddr(*session))
-	authMethods := (C.int)(C.SSH_AUTH_METHOD_PASSWORD | C.SSH_AUTH_METHOD_PUBLICKEY)
+// HandleSSHAuth Handles the authentication process.
+func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
+	conn, chans, reqs, err := ssh.NewServerConn(*connection, server.config)
 
-	// Get the status of the connection and report if it's closed.
-	if C.ssh_get_status(*session) != 0 {
-		err := C.GoString(C.ssh_get_error(unsafe.Pointer(*session)))
-		logman.Println(ip.String() + " closed status: " + err)
-		log.Println(ip.String() + " closed status: " + err)
-	}
-
-	log.Println(ip.String(), port, "connection request")
-	logman.Println(ip.String(), port, "connection request")
-
-	// Set how we want to allow peers to connect.
-	C.ssh_set_auth_methods(*session, authMethods)
-
-	// Handle the key exchange.
-	if C.ssh_handle_key_exchange(*session) != C.SSH_OK {
-		// If there was an error, report it.
-		sshErr := C.GoString(C.ssh_get_error(unsafe.Pointer(*session)))
-		err := ip.String() + " Error exchanging keys " + sshErr
-
-		logman.Println(err)
-		log.Println(err)
-
+	if err != nil {
+		log.Println("Error during handshake", err)
+		logman.Println("Error during handshake", err)
 		return false
 	}
 
-	// Get the client's SSH banner. This can give us some useful information as to what
-	// software the attacker is running.
-	clientBanner := C.GoString(C.ssh_get_clientbanner(*session))
-	log.Println(ip.String(), port, "client connected with", clientBanner)
-	logman.Println(ip.String(), port, "client connected with", clientBanner)
+	// At this point the user would be logged in.
 
-	for {
-		// Receive the message from the client.
-		message := C.ssh_message_get(*session)
+	log.Printf("User %s logged in via %s\n", conn.User(), string(conn.ClientVersion()))
 
-		if message == nil {
-			break
-		}
+	// When I figure out what to do in this stage, this will have to be handled by something like the
+	// code here: https://github.com/gogs/gogs/blob/main/internal/ssh/ssh.go
+	// Ideally the honypot would log all payloads.
+	go ssh.DiscardRequests(reqs)
 
-		messageType := C.ssh_message_subtype(message)
-		username := C.GoString(C.ssh_message_auth_user(message))
-
-		// If the attacker is submitting an authentication message, then we need to read
-		// it and output the data that they entered.
-		if messageType == C.SSH_AUTH_METHOD_PASSWORD {
-			password := C.GoString(C.ssh_message_auth_password(message))
-
-			// Add the password to the database.
-			server.db.Create(&PasswordConnection{
-				IPAddress: ip.String(),
-				Username:  username,
-				Password:  password,
-			})
-
-			logman.Printf("%s %s pass:%s\n", ip.String(), username, password)
-			log.Printf("%s %s pass:%s\n", ip.String(), username, password)
-		} else if messageType == C.SSH_AUTH_METHOD_PUBLICKEY {
-			// Get the user's auth key. This may not be that helpful, but I think it may
-			// be interesting to capture some keys from those who are not careful.
-			authKey := C.ssh_message_auth_pubkey(message)
-
-			// Get the key type (ssh-rsa, etc).
-			keyType := C.GoString(C.get_ssh_key_type(authKey))
-
-			// This will hold the public key in base64.
-			var pubKey *C.char
-
-			// Now get the public key blob.
-			C.ssh_pki_export_pubkey_base64(authKey, &pubKey)
-
-			// Now we get the SHA3-256 hash of the public key, because it may be too long
-			// to display on the screen.
-			pubKeyHash, err := GetSHA3256Hash(C.GoBytes(unsafe.Pointer(pubKey),
-				C.int(len(C.GoString(pubKey)))))
-
-			// Add the key to the database.
-			server.db.Create(&KeyConnection{
-				IPAddress: ip.String(),
-				Username:  username,
-				Key:       C.GoString(pubKey),
-				KeyHash:   ByteArrayToHex(pubKeyHash),
-			})
-
-			if err == nil {
-				logman.Printf("%s %s key:%s (%s)\n",
-					ip.String(),
-					username,
-					ByteArrayToHex(pubKeyHash),
-					keyType)
-				log.Printf("%s %s key:%s (%s)\n",
-					ip.String(),
-					username,
-					ByteArrayToHex(pubKeyHash),
-					keyType)
-			}
-		} else {
-			C.ssh_message_auth_set_methods(message, authMethods)
-			C.ssh_message_reply_default(message)
-			continue
-		}
-
-		// Reply with the default message and clear the pointer.
-		C.ssh_message_auth_set_methods(message, authMethods)
-		C.ssh_message_reply_default(message)
-		C.ssh_message_free(message)
+	for c := range chans {
+		fmt.Println(c)
 	}
-
-	log.Println(ip.String(), "connection terminated")
-	logman.Println(ip.String(), "connection terminated")
 
 	return true
 }
@@ -239,42 +168,22 @@ func (server *SSHServer) HandleSSHAuth(session *C.ssh_session) bool {
 func (server *SSHServer) ListenLoop() {
 	// Now, this is the main loop where all the connections should be captured.
 	for {
-		// Create a new SSH Session manager for the new connection.
-		session := C.ssh_new()
+		connection, err := server.listener.Accept()
 
-		// Try to accept the connection.
-		if C.ssh_bind_accept(server.sshbind, session) == C.SSH_ERROR {
-			msg := C.GoString(C.ssh_get_error(unsafe.Pointer(server.sshbind)))
-			log.Println("Error accepting", msg)
-			logman.Println("Error accepting", msg)
-			continue
+		if err != nil {
+			log.Println("Error on accepting connection", err)
+			logman.Println("Error on accepting connection", err)
 		}
 
 		// Handle authentication in a goroutine so that the loop is freed up for a possible
 		// concurrent connection.
 		go func() {
-			server.HandleSSHAuth(&session)
+			server.HandleSSHAuth(&connection)
 		}()
 	}
 }
 
-// Stop : Stop the SSH server from running.
+// Stop will stop the SSH server from running.
 func (server *SSHServer) Stop() {
-	C.ssh_finalize()
-}
-
-// GetSSHSockaddr : Returns the socket address of an SSH client
-//
-//	(https://golang.org/pkg/syscall/#Sockaddr).
-func GetSSHSockaddr(session C.ssh_session) *syscall.Sockaddr {
-	sockFd := int(C.ssh_get_fd(session))
-	sock, err := syscall.Getpeername(sockFd)
-
-	if err != nil {
-		log.Println(err.Error())
-		logman.Println(err.Error())
-		return nil
-	}
-
-	return &sock
+	server.listener.Close()
 }

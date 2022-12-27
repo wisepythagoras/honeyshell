@@ -15,8 +15,9 @@ func main() {
 	// Define the command line flags and their default values.
 	username := flag.String("user", "", "Set the permissions to a certain user (ie 'nobody')")
 	port := flag.Int("port", 22, "The port the deamon should run on")
-	banner := flag.String("banner", "OpenSSH_7.4p1 Raspbian-10+deb9u3", "The banner for the SSH server")
+	banner := flag.String("banner", "SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u3", "The banner for the SSH server")
 	key := flag.String("key", "", "The RSA key to use")
+	verbose := flag.Bool("verbose", false, "Print out debug messages")
 
 	// Parse the command line arguments (flags).
 	flag.Parse()
@@ -36,7 +37,7 @@ func main() {
 	logman.Println("Starting Honeyshell")
 
 	// Connect to the database.
-	db, err := ConnectDB()
+	db, err := ConnectDB(*verbose)
 
 	if err != nil {
 		log.Fatalln(err)

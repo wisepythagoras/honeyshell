@@ -1,41 +1,14 @@
 # Honeyshell
 
-An SSH honeypot based on the [libssh](https://www.libssh.org/) library written entirely in Go.
+An SSH honeypot written entirely in Go, using `crypto/ssh` as its base.
 
 Currently, it allows connections on the server and collects failed login attempts, meaning all usernames and passwords. Also, you can decrease the permissions on the process by flipping to a different user (ie 'nobody').
 
+A version running [libssh](https://www.libssh.org/) can be found in the [legacy](https://github.com/wisepythagoras/honeyshell/tree/legacy) branch. It has been tested up to version `0.10` of the library. Two functions that it's using have been deprecated and I was trying to get rid of them with the work on the [c-branch](https://github.com/wisepythagoras/honeyshell/tree/c-branch) branch. The code on `c-branch` hasn't been fully tested and is buggy, because the libssh team decided to swittch to a callback model and I had to improvise on how to get it to work with Go.
+
 ## Building
 
-There are three dependencies, which are the following:
-
-### 1. `libgcrypt` and `libgpg-error`
-
-Install them from your package manager:
-
-``` sh
-sudo apt install libgcrypt20-dev libgpg-error-dev
-```
-
-### 2. [libssh](https://www.libssh.org/)
-
-Download the source from the website and build with the following script:
-
-``` sh
-cd libssh-<version>/
-mkdir build && cd build
-cmake \
-    -DWITH_STATIC_LIB=ON \
-    -DWITH_GSSAPI=OFF \
-    -DWITH_GCRYPT=ON \
-    -DWITH_SERVER=ON \
-    ..
-make
-sudo make install
-```
-
-### Compile
-
-To compile the program, simply run `./build.sh` in your terminal.
+To compile the program, simply run `go build` in your terminal.
 
 ## Running
 
@@ -56,20 +29,20 @@ Usage of ./honeyshell:
 Example usage:
 
 ``` sh
-sudo ./honeyshell -user nobody -port 2222 -key ~/.ssh/id_rsa
+sudo ./honeyshell -user nobody -port 2222 -key ~/.ssh/key_for_honeypot_rsa
 ```
 
 The output should look something like this:
 
 ```
-Starting on port 2222
-Changing permissions to user 'nobody'
-127.0.0.1 60812 connection request
-127.0.0.1 60812 client connected with SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u6
-127.0.0.1 admin 216247142fed250e4c5bfdfe1af2262a8000f0581f1f6bd20509cd49d542a27a
-127.0.0.1 admin 3bc98ba6299bcb10d0eb185be884a12ee35e5eb311edb77fe99f36e92fbba603
-127.0.0.1 admin 1f671129e0ca2917e24809271109e20378f4f50de41bfa9f5b578056535f64e1
-127.0.0.1 admin password123
-127.0.0.1 admin passwordtest
-127.0.0.1 connection terminated
+2022/12/27 11:30:09 Starting on port 2222
+2022/12/27 11:30:09 Changing permissions to user 'nobody'
+2022/12/27 11:30:12 127.0.0.1:54476 test key:442f78a53b6188a6b18a225c86aeb9c77592add0d714d26f8d84c9e4f9f59a77 (ssh-rsa)
+2022/12/27 11:30:12 127.0.0.1:54476 test key:dfde57ac7251135922968b933fd28944e384a504515ba7ce27cd925224af4657 (ssh-rsa)
+2022/12/27 11:30:12 127.0.0.1:54476 test key:c09d0feddad874b7a2cd82bdc4b846632fa47a7113a17cf8c846876a5f4eaf4a (ssh-rsa)
+2022/12/27 11:30:12 127.0.0.1:54476 test key:589adac413c8d42c9166dd0e56d2da5cdeaf4abd731f001b3fa40b3c6232383b (ssh-rsa)
+2022/12/27 11:30:12 Error during handshake ssh: disconnect, reason 2: too many authentication failures
+2022/12/27 11:30:19 127.0.0.1:54478 test pass:test
+2022/12/27 11:30:20 127.0.0.1:54478 test pass:admin
+2022/12/27 11:30:26 127.0.0.1:54478 test pass:password123
 ```

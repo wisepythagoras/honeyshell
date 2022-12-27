@@ -35,11 +35,17 @@ type KeyConnection struct {
 }
 
 // ConnectDB connects to the database and returns the db object.
-func ConnectDB() (*gorm.DB, error) {
+func ConnectDB(verbose bool) (*gorm.DB, error) {
+	logLevel := logger.Silent
+
+	if verbose {
+		logLevel = logger.Info
+	}
+
 	// Connect to the database. Maybe this can change in the futurue to support more
 	// types of databases (MySQL, MariaDB, PostgreSQL, etc).
 	db, err := gorm.Open(sqlite.Open("honeyshell.db"), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
+		Logger: logger.Default.LogMode(logLevel),
 	})
 
 	if err != nil {

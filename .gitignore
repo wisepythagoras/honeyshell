@@ -19,3 +19,6 @@ bin
 src
 libssh-*
 id_rsa*
+
+# Custom
+.vscode/
