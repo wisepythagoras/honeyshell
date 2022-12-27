@@ -21,13 +21,13 @@ type SSHServer struct {
 	listener net.Listener
 }
 
-// Init : Initialize the SSH server.
+// Init Initialize the SSH server.
 func (server *SSHServer) Init() bool {
 	server.config = &ssh.ServerConfig{
-		PasswordCallback:  server.PasswordChecker,
-		PublicKeyCallback: server.PublicKeyChecker,
+		PasswordCallback:  server.passwordChecker,
+		PublicKeyCallback: server.publicKeyChecker,
 		ServerVersion:     server.banner,
-		AuthLogCallback:   server.AuthLogHandler,
+		AuthLogCallback:   server.authLogHandler,
 	}
 
 	// Now read the server's private key.
@@ -64,7 +64,8 @@ func (server *SSHServer) Init() bool {
 	return true
 }
 
-func (server *SSHServer) AuthLogHandler(c ssh.ConnMetadata, method string, err error) {
+// authLogHandler is meant to just display when a user connects.
+func (server *SSHServer) authLogHandler(c ssh.ConnMetadata, method string, err error) {
 	if method == "none" {
 		ip := c.RemoteAddr()
 		clientBanner := string(c.ClientVersion())
@@ -74,9 +75,9 @@ func (server *SSHServer) AuthLogHandler(c ssh.ConnMetadata, method string, err e
 	}
 }
 
-// PasswordChecker will take the connection metadata and password that was used and log it along with
+// passwordChecker will take the connection metadata and password that was used and log it along with
 // other needed information to both the log file/stdout and database.
-func (server *SSHServer) PasswordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
+func (server *SSHServer) passwordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
 	ip := c.RemoteAddr()
 	username := c.User()
 	password := string(pass)
@@ -106,9 +107,9 @@ func (server *SSHServer) PasswordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.
 	return nil, fmt.Errorf("incorrect password for %q", c.User())
 }
 
-// PublicKeyChecker handles any attempt to send a public key. This could be especially helpful when monitoring
+// publicKeyChecker handles any attempt to send a public key. This could be especially helpful when monitoring
 // the keys of your organization. If you see a strange IP using it, it's been compromised.
-func (server *SSHServer) PublicKeyChecker(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
+func (server *SSHServer) publicKeyChecker(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
 	ip := c.RemoteAddr()
 	username := c.User()
 	// pubKeyHash := pubKey.Marshal()
