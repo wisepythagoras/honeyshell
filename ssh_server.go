@@ -112,7 +112,6 @@ func (server *SSHServer) passwordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.
 func (server *SSHServer) publicKeyChecker(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
 	ip := c.RemoteAddr()
 	username := c.User()
-	// pubKeyHash := pubKey.Marshal()
 
 	// Now we get the SHA3-256 hash of the public key, because it may be too long
 	// to display on the screen.
