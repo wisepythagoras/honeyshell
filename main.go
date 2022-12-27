@@ -15,7 +15,7 @@ func main() {
 	// Define the command line flags and their default values.
 	username := flag.String("user", "", "Set the permissions to a certain user (ie 'nobody')")
 	port := flag.Int("port", 22, "The port the deamon should run on")
-	banner := flag.String("banner", "OpenSSH_7.4p1 Raspbian-10+deb9u3", "The banner for the SSH server")
+	banner := flag.String("banner", "SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u3", "The banner for the SSH server")
 	key := flag.String("key", "", "The RSA key to use")
 
 	// Parse the command line arguments (flags).
