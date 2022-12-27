@@ -87,17 +87,10 @@ func (server *SSHServer) passwordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.
 		IPAddress: ip.String(),
 		Username:  username,
 		Password:  password,
-	})
+	}).Commit()
 
 	logman.Printf("%s %s pass:%s\n", ip.String(), username, password)
 	log.Printf("%s %s pass:%s\n", ip.String(), username, password)
-
-	// Add the password to the database.
-	server.db.Create(&PasswordConnection{
-		IPAddress: ip.String(),
-		Username:  username,
-		Password:  password,
-	})
 
 	// This is where and how I'd ideally add logic to mock logins and trap bad bots.
 	// if c.User() == "admin" && string(pass) == "admin" {
@@ -134,7 +127,7 @@ func (server *SSHServer) publicKeyChecker(c ssh.ConnMetadata, pubKey ssh.PublicK
 		Username:  username,
 		Key:       string(pubKey.Marshal()),
 		KeyHash:   ByteArrayToHex(pubKeyHash),
-	})
+	}).Commit()
 
 	return nil, fmt.Errorf("unknown public key for %q", c.User())
 }
