@@ -24,6 +24,8 @@ Usage of ./honeyshell:
     	The port the deamon should run on (default 22)
   -user string
     	Set the permissions to a certain user (ie 'nobody')
+  -verbose
+      Print out debug messages
 ```
 
 Example usage:
