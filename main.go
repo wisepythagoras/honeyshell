@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"log"
+
+	"github.com/wisepythagoras/honeyshell/plugin"
 )
 
 var logman *Logman
@@ -17,6 +19,7 @@ func main() {
 	port := flag.Int("port", 22, "The port the deamon should run on")
 	banner := flag.String("banner", "SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u3", "The banner for the SSH server")
 	key := flag.String("key", "", "The RSA key to use")
+	pluginsFolder := flag.String("plugins", "", "The path to the folder containing the plugins")
 	verbose := flag.Bool("verbose", false, "Print out debug messages")
 
 	// Parse the command line arguments (flags).
@@ -30,6 +33,22 @@ func main() {
 	// Validate the port.
 	if *port < 1 || *port > 65535 {
 		log.Fatalf("Invalid port number %d\n", *port)
+	}
+
+	if len(*pluginsFolder) > 0 {
+		plugins, err := plugin.LoadPlugins(*pluginsFolder)
+
+		if err != nil {
+			log.Fatalln("Error:", err)
+		}
+
+		for _, pl := range plugins {
+			err = pl.Init()
+
+			if err != nil {
+				log.Fatalln("Error:", err)
+			}
+		}
 	}
 
 	// Start the logman.
