@@ -6,19 +6,21 @@ import (
 	"net"
 	"os"
 
+	"github.com/wisepythagoras/honeyshell/plugin"
 	"golang.org/x/crypto/ssh"
 	"gorm.io/gorm"
 )
 
 // SSHServer : This is the object that defines an SSH server.
 type SSHServer struct {
-	db       *gorm.DB
-	port     int
-	address  string
-	key      string
-	banner   string
-	config   *ssh.ServerConfig
-	listener net.Listener
+	db            *gorm.DB
+	port          int
+	address       string
+	key           string
+	banner        string
+	config        *ssh.ServerConfig
+	listener      net.Listener
+	pluginManager *plugin.PluginManager
 }
 
 // Init Initialize the SSH server.
@@ -79,6 +81,8 @@ func (server *SSHServer) authLogHandler(c ssh.ConnMetadata, method string, err e
 // other needed information to both the log file/stdout and database.
 func (server *SSHServer) passwordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
 	ip := c.RemoteAddr()
+	ipStr, _, _ := net.SplitHostPort(ip.String())
+	ipObj := net.ParseIP(ipStr)
 	username := c.User()
 	password := string(pass)
 
@@ -91,6 +95,16 @@ func (server *SSHServer) passwordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.
 
 	logman.Printf("%s %s pass:%s\n", ip.String(), username, password)
 	log.Printf("%s %s pass:%s\n", ip.String(), username, password)
+
+	// If a plugin manager was passed in and initialized, then call all of the plugins that offer a password login
+	// interception function.
+	if server.pluginManager != nil {
+		for _, pl := range server.pluginManager.GetPasswordIntercepts() {
+			if shouldLogin := pl.CallPasswordInterceptor(username, password, &ipObj); shouldLogin {
+				return nil, nil
+			}
+		}
+	}
 
 	// This is where and how I'd ideally add logic to mock logins and trap bad bots.
 	// if c.User() == "admin" && string(pass) == "admin" {

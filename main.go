@@ -35,19 +35,13 @@ func main() {
 		log.Fatalf("Invalid port number %d\n", *port)
 	}
 
+	var pluginManager *plugin.PluginManager
+
 	if len(*pluginsFolder) > 0 {
-		plugins, err := plugin.LoadPlugins(*pluginsFolder)
+		pluginManager = new(plugin.PluginManager)
 
-		if err != nil {
+		if err := pluginManager.LoadPlugins(*pluginsFolder); err != nil {
 			log.Fatalln("Error:", err)
-		}
-
-		for _, pl := range plugins {
-			err = pl.Init()
-
-			if err != nil {
-				log.Fatalln("Error:", err)
-			}
 		}
 	}
 
@@ -64,10 +58,11 @@ func main() {
 
 	// Create a new SSH server object.
 	sshServer := &SSHServer{
-		port:    *port,
-		address: "0.0.0.0",
-		key:     *key,
-		banner:  *banner,
+		port:          *port,
+		address:       "0.0.0.0",
+		key:           *key,
+		banner:        *banner,
+		pluginManager: pluginManager,
 	}
 
 	// Initialize the SSH server.

@@ -1,13 +1,18 @@
 package plugin
 
-import "log"
+import (
+	"log"
+	"net"
+)
 
 type CommandCallbackFn func(...string)
 
 type CommandFn func([]string, CommandCallbackFn)
+type PasswordInterceptFn func(string, string, *net.IP) bool
 
 type Config struct {
-	CommandCallbacks map[string]CommandFn
+	CommandCallbacks    map[string]CommandFn
+	PasswordInterceptor PasswordInterceptFn
 }
 
 func (c *Config) Init() {
@@ -24,4 +29,8 @@ func (c *Config) RegisterCommand(cmd string, cmdFn CommandFn) bool {
 	c.CommandCallbacks[cmd] = cmdFn
 
 	return true
+}
+
+func (c *Config) RegisterPasswordIntercept(interceptor PasswordInterceptFn) {
+	c.PasswordInterceptor = interceptor
 }

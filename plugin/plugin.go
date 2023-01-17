@@ -3,6 +3,7 @@ package plugin
 import (
 	"fmt"
 	"io/fs"
+	"net"
 	"path/filepath"
 
 	lua "github.com/yuin/gopher-lua"
@@ -31,6 +32,8 @@ func (p *Plugin) Init() error {
 	p.L = lua.NewState()
 
 	// Set up the environment here.
+	native := nativeModule{L: p.L}
+	native.createImportFn()
 
 	// Run the extension's main file.
 	if err := p.L.DoFile(p.GetPath(true)); err != nil {
@@ -58,4 +61,16 @@ func (p *Plugin) Init() error {
 	}
 
 	return nil
+}
+
+func (p *Plugin) HasPasswordIntercept() bool {
+	return p.Config.PasswordInterceptor != nil
+}
+
+func (p *Plugin) CallPasswordInterceptor(username, password string, ip *net.IP) bool {
+	if !p.HasPasswordIntercept() {
+		return false
+	}
+
+	return p.Config.PasswordInterceptor(username, password, ip)
 }
