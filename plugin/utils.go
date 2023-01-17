@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"gorm.io/gorm"
 )
 
-func LoadPlugins(path string) ([]*Plugin, error) {
+func LoadPlugins(path string, db *gorm.DB) ([]*Plugin, error) {
 	files, err := os.ReadDir(path)
 	plugins := []*Plugin{}
 
@@ -45,6 +47,7 @@ func LoadPlugins(path string) ([]*Plugin, error) {
 			Path: path,
 			Dir:  f,
 			Main: mainFile,
+			DB:   db,
 		}
 
 		plugins = append(plugins, extension)

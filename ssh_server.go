@@ -88,7 +88,7 @@ func (server *SSHServer) passwordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.
 
 	// Add the password to the database.
 	server.db.Create(&PasswordConnection{
-		IPAddress: ip.String(),
+		IPAddress: ipStr,
 		Username:  username,
 		Password:  password,
 	}).Commit()

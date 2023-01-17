@@ -37,20 +37,20 @@ func main() {
 
 	var pluginManager *plugin.PluginManager
 
-	if len(*pluginsFolder) > 0 {
-		pluginManager = new(plugin.PluginManager)
-
-		if err := pluginManager.LoadPlugins(*pluginsFolder); err != nil {
-			log.Fatalln("Error:", err)
-		}
-	}
-
 	// Start the logman.
 	logman = GetLogmanInstance()
 	logman.Println("Starting Honeyshell")
 
 	// Connect to the database.
 	db, err := ConnectDB(*verbose)
+
+	if len(*pluginsFolder) > 0 {
+		pluginManager = &plugin.PluginManager{DB: db}
+
+		if err := pluginManager.LoadPlugins(*pluginsFolder); err != nil {
+			log.Fatalln("Error:", err)
+		}
+	}
 
 	if err != nil {
 		log.Fatalln(err)

@@ -6,7 +6,9 @@ import (
 	"net"
 	"path/filepath"
 
+	"github.com/wisepythagoras/honeyshell/plugin/native"
 	lua "github.com/yuin/gopher-lua"
+	"gorm.io/gorm"
 	luar "layeh.com/gopher-luar"
 )
 
@@ -16,6 +18,7 @@ type Plugin struct {
 	Main   fs.DirEntry
 	L      *lua.LState
 	Config *Config
+	DB     *gorm.DB
 }
 
 func (p *Plugin) GetPath(withMain bool) string {
@@ -32,8 +35,10 @@ func (p *Plugin) Init() error {
 	p.L = lua.NewState()
 
 	// Set up the environment here.
-	native := nativeModule{L: p.L}
-	native.createImportFn()
+	nativeMod := nativeModule{L: p.L}
+	nativeMod.createImportFn()
+
+	p.L.SetGlobal("db", luar.New(p.L, native.DBModule(p.L, p.DB)))
 
 	// Run the extension's main file.
 	if err := p.L.DoFile(p.GetPath(true)); err != nil {

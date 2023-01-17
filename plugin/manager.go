@@ -1,13 +1,16 @@
 package plugin
 
+import "gorm.io/gorm"
+
 type PluginManager struct {
 	plugins         []*Plugin
 	passwordPlugins []*Plugin
+	DB              *gorm.DB
 }
 
 func (pm *PluginManager) LoadPlugins(path string) error {
 	var err error
-	pm.plugins, err = LoadPlugins(path)
+	pm.plugins, err = LoadPlugins(path, pm.DB)
 	pm.passwordPlugins = make([]*Plugin, 0)
 
 	if err != nil {
