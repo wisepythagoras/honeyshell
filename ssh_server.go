@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/wisepythagoras/honeyshell/plugin"
 	"golang.org/x/crypto/ssh"
@@ -198,10 +199,17 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 					break
 				}
 
-				if line == "pass" {
-					pass, _ := term.ReadPassword("pass: ")
-					fmt.Println(pass)
+				if strings.Trim(line, " ") == "" {
+					continue
+				} else if commandFn, ok := server.pluginManager.GetCommand(line); ok {
+					commandFn([]string{}, func(res ...string) {
+						fmt.Println(res)
+						for _, v := range res {
+							term.Write([]byte(v))
+						}
+					})
 				} else {
+					term.Write([]byte(fmt.Sprintf("%s: command not found\n", line)))
 					fmt.Println("->", line)
 				}
 			}

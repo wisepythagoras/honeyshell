@@ -72,6 +72,14 @@ func (p *Plugin) HasPasswordIntercept() bool {
 	return p.Config.PasswordInterceptor != nil
 }
 
+func (p *Plugin) HasCommandDefined() bool {
+	return len(p.Config.CommandCallbacks) > 0
+}
+
+func (p *Plugin) Commands() map[string]CommandFn {
+	return p.Config.CommandCallbacks
+}
+
 func (p *Plugin) CallPasswordInterceptor(username, password string, ip *net.IP) bool {
 	if !p.HasPasswordIntercept() {
 		return false
