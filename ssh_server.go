@@ -203,7 +203,6 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 					continue
 				} else if commandFn, ok := server.pluginManager.GetCommand(line); ok {
 					commandFn([]string{}, func(res ...string) {
-						fmt.Println(res)
 						for _, v := range res {
 							term.Write([]byte(v))
 						}

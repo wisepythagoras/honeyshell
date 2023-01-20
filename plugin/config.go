@@ -5,9 +5,9 @@ import (
 	"net"
 )
 
-type CommandCallbackFn func(...string)
+type TermWriteFn func(...string)
 
-type CommandFn func([]string, CommandCallbackFn)
+type CommandFn func([]string, TermWriteFn)
 type PasswordInterceptFn func(string, string, *net.IP) bool
 
 type Config struct {
