@@ -8,6 +8,7 @@ import (
 
 	"github.com/wisepythagoras/honeyshell/plugin"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/terminal"
 	"gorm.io/gorm"
 )
 
@@ -172,7 +173,47 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 	go ssh.DiscardRequests(reqs)
 
 	for c := range chans {
-		fmt.Println(c)
+		if c.ChannelType() != "session" {
+			c.Reject(ssh.UnknownChannelType, "unknown channel type")
+			continue
+		}
+
+		channel, requests, err := c.Accept()
+
+		if err != nil {
+			log.Fatalf("Could not accept channel: %v", err)
+		}
+
+		// Sessions have out-of-band requests such as "shell",
+		// "pty-req" and "env".  Here we handle only the
+		// "shell" request.
+		go func(in <-chan *ssh.Request) {
+			for req := range in {
+				if req.Type == "shell" || req.Type == "pty" {
+					req.Reply(true, nil)
+				}
+			}
+		}(requests)
+
+		term := terminal.NewTerminal(channel, "$ ")
+
+		go func() {
+			defer channel.Close()
+			for {
+				line, err := term.ReadLine()
+
+				if err != nil {
+					break
+				}
+
+				if line == "pass" {
+					pass, _ := term.ReadPassword("pass: ")
+					fmt.Println(pass)
+				} else {
+					fmt.Println("->", line)
+				}
+			}
+		}()
 	}
 
 	return true
