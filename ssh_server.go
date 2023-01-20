@@ -107,11 +107,6 @@ func (server *SSHServer) passwordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.
 		}
 	}
 
-	// This is where and how I'd ideally add logic to mock logins and trap bad bots.
-	// if c.User() == "admin" && string(pass) == "admin" {
-	// 	return nil, nil
-	// }
-
 	return nil, fmt.Errorf("incorrect password for %q", c.User())
 }
 
@@ -184,9 +179,6 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 			log.Fatalf("Could not accept channel: %v", err)
 		}
 
-		// Sessions have out-of-band requests such as "shell",
-		// "pty-req" and "env".  Here we handle only the
-		// "shell" request.
 		go func(in <-chan *ssh.Request) {
 			for req := range in {
 				if req.Type == "shell" || req.Type == "pty" {
