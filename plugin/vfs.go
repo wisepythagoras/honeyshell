@@ -3,6 +3,7 @@ package plugin
 import (
 	"encoding/json"
 	"os"
+	"strings"
 )
 
 const T_DIR = 1
@@ -51,8 +52,21 @@ type VFS struct {
 func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
 	if name == "/" {
 		return "", &vfs.Root
-	} else if name == "~" {
-		return vfs.Find(vfs.Home, T_DIR)
+	} else if strings.HasPrefix(name, "~") {
+		homePath, homeDir := vfs.Find(vfs.Home, T_DIR)
+
+		if name == "~" || name == "~/" {
+			return strings.ReplaceAll(homePath, "/home/{}", "~"), homeDir
+		}
+
+		sanitizedPath := strings.ReplaceAll(name, "~/", "{}/")
+		foundPath, foundFile := homeDir.Find(sanitizedPath, "", t)
+
+		if foundFile != nil {
+			foundPath = strings.ReplaceAll(foundPath, "{}/", "~/")
+		}
+
+		return foundPath, foundFile
 	}
 
 	return vfs.Root.Find(name, "", t)
