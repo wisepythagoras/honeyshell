@@ -23,3 +23,4 @@ id_rsa*
 # Custom
 .vscode/
 plugins/
+vfs.json

@@ -16,6 +16,7 @@ type VFSFile struct {
 	Files    []VFSFile   `json:"files"`
 	Contents string      `json:"contents"`
 	Mode     os.FileMode `json:"mode"`
+	Owner    string      `json:"owner"`
 }
 
 // Find will check the current file or its descendants for the file with name `name` and type `t`.

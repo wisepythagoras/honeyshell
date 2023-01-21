@@ -229,7 +229,7 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 						for _, v := range res {
 							sessionTerm.Write([]byte(v))
 						}
-					})
+					}, server.pluginManager.PluginVFS)
 				} else {
 					sessionTerm.Write([]byte(fmt.Sprintf("%s: command not found\n", line)))
 					fmt.Println("->", line)
