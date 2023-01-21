@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -82,4 +83,41 @@ func GetPasswd(name string) (*C.struct_passwd, error) {
 
 	// Finally return the passwd.
 	return passwdC, nil
+}
+
+func ParseCmdArgs(argsStr string) map[string]any {
+	args := make(map[string]any)
+	parts := strings.Split(argsStr, " ")
+
+	for i, part := range parts {
+		part = strings.Trim(part, " ")
+
+		if len(part) == 0 {
+			continue
+		}
+
+		if part[0] == '-' && part[1] == '-' {
+			key := strings.Trim(part, "-")
+
+			if i < len(parts)-1 && parts[i+1][0] != '-' {
+				args[key] = parts[i+1]
+			}
+
+			args[key] = true
+		} else if part[0] == '-' {
+			key := strings.Trim(part, "-")
+
+			if i < len(parts)-1 && parts[i+1][0] != '-' {
+				args[key] = parts[i+1]
+			}
+
+			args[key] = true
+
+			for _, char := range key {
+				args[string(char)] = true
+			}
+		}
+	}
+
+	return args
 }

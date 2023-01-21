@@ -201,8 +201,18 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 
 				if strings.Trim(line, " ") == "" {
 					continue
-				} else if commandFn, ok := server.pluginManager.GetCommand(line); ok {
-					commandFn([]string{}, func(res ...string) {
+				}
+
+				parts := strings.SplitN(line, " ", 2)
+				cmd := parts[0]
+				args := make(map[string]any)
+
+				if len(parts) > 1 {
+					args = ParseCmdArgs(parts[1])
+				}
+
+				if commandFn, ok := server.pluginManager.GetCommand(cmd); ok {
+					commandFn(args, func(res ...string) {
 						for _, v := range res {
 							sessionTerm.Write([]byte(v))
 						}
