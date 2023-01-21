@@ -212,10 +212,11 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 
 				parts := strings.SplitN(line, " ", 2)
 				cmd := parts[0]
-				args := make(map[string]any)
+				args := &plugin.CmdArgs{}
 
 				if len(parts) > 1 {
-					args = ParseCmdArgs(parts[1])
+					args.RawArgs = parts[1]
+					args.Parse()
 				}
 
 				if commandFn, ok := server.pluginManager.GetCommand(cmd); ok {
