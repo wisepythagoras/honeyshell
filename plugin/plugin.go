@@ -39,6 +39,12 @@ func (p *Plugin) Init() error {
 	nativeMod.createImportFn()
 
 	p.L.SetGlobal("db", luar.New(p.L, native.DBModule(p.L, p.DB)))
+	p.L.SetGlobal("dirname", luar.New(p.L, p.GetPath(false)))
+
+	// Allow requiring lua files from the plugin's directory.
+	pkg := p.L.GetGlobal("package")
+	newPath := fmt.Sprintf("%s/?.lua;%s", p.GetPath(false), pkg.String())
+	p.L.SetField(pkg, "path", luar.New(p.L, newPath))
 
 	// Run the extension's main file.
 	if err := p.L.DoFile(p.GetPath(true)); err != nil {

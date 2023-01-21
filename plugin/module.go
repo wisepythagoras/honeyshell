@@ -18,6 +18,12 @@ func (nm *nativeModule) importFn(module string) *lua.LTable {
 		return native.FmtModule(nm.L)
 	case "time":
 		return native.TimeModule(nm.L)
+	case "io":
+		return native.IoModule(nm.L)
+	case "os":
+		return native.OsModule(nm.L)
+	case "json":
+		return native.JsonModule(nm.L)
 	default:
 		log.Fatalf("No module %q found", module)
 	}
