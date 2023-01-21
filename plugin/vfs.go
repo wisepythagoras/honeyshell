@@ -44,12 +44,15 @@ func (f *VFSFile) StrMode() string {
 
 type VFS struct {
 	Root VFSFile `json:"root"`
+	Home string  `json:"home"`
 }
 
 // Find tries to find a specific file in the virtual file system.
 func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
 	if name == "/" {
 		return "", &vfs.Root
+	} else if name == "~" {
+		return vfs.Find(vfs.Home, T_ANY)
 	}
 
 	return vfs.Root.Find(name, "", t)
