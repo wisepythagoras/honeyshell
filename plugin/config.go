@@ -7,7 +7,7 @@ import (
 
 type TermWriteFn func(...string)
 
-type CommandFn func(map[string]any, TermWriteFn, *VFS)
+type CommandFn func(map[string]any, *Session)
 type PasswordInterceptFn func(string, string, *net.IP) bool
 
 type Config struct {

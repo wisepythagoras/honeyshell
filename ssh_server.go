@@ -189,19 +189,13 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 		}(requests)
 
 		sessionTerm := term.NewTerminal(channel, "$ ")
-		sessionTerm.AutoCompleteCallback = func(line string, pos int, key rune) (newLine string, newPos int, ok bool) {
-			if key == 9 {
-				_, matchingCmds := server.pluginManager.MatchCommand(line)
-
-				for _, cmd := range matchingCmds {
-					sessionTerm.Write([]byte(cmd))
-				}
-
-				sessionTerm.Write([]byte("\n"))
-			}
-
-			return line, pos, ok
+		session := &plugin.Session{
+			VFS:      server.pluginManager.PluginVFS,
+			Username: conn.User(),
+			Term:     sessionTerm,
+			Manager:  server.pluginManager,
 		}
+		sessionTerm.AutoCompleteCallback = session.AutoCompleteCallback
 
 		go func() {
 			defer channel.Close()
@@ -225,11 +219,7 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 				}
 
 				if commandFn, ok := server.pluginManager.GetCommand(cmd); ok {
-					commandFn(args, func(res ...string) {
-						for _, v := range res {
-							sessionTerm.Write([]byte(v))
-						}
-					}, server.pluginManager.PluginVFS)
+					commandFn(args, session)
 				} else {
 					sessionTerm.Write([]byte(fmt.Sprintf("%s: command not found\n", line)))
 					fmt.Println("->", line)
