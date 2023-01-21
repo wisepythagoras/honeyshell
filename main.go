@@ -20,6 +20,7 @@ func main() {
 	banner := flag.String("banner", "SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u3", "The banner for the SSH server")
 	key := flag.String("key", "", "The RSA key to use")
 	pluginsFolder := flag.String("plugins", "", "The path to the folder containing the plugins")
+	vfsPath := flag.String("vfs", "", "The path to the VFS (virtual file system) JSON file")
 	verbose := flag.Bool("verbose", false, "Print out debug messages")
 
 	// Parse the command line arguments (flags).
