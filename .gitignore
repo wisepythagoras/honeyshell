@@ -22,3 +22,4 @@ id_rsa*
 
 # Custom
 .vscode/
+plugins/

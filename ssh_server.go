@@ -5,20 +5,24 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 
+	"github.com/wisepythagoras/honeyshell/plugin"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/term"
 	"gorm.io/gorm"
 )
 
 // SSHServer : This is the object that defines an SSH server.
 type SSHServer struct {
-	db       *gorm.DB
-	port     int
-	address  string
-	key      string
-	banner   string
-	config   *ssh.ServerConfig
-	listener net.Listener
+	db            *gorm.DB
+	port          int
+	address       string
+	key           string
+	banner        string
+	config        *ssh.ServerConfig
+	listener      net.Listener
+	pluginManager *plugin.PluginManager
 }
 
 // Init Initialize the SSH server.
@@ -79,12 +83,14 @@ func (server *SSHServer) authLogHandler(c ssh.ConnMetadata, method string, err e
 // other needed information to both the log file/stdout and database.
 func (server *SSHServer) passwordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
 	ip := c.RemoteAddr()
+	ipStr, _, _ := net.SplitHostPort(ip.String())
+	ipObj := net.ParseIP(ipStr)
 	username := c.User()
 	password := string(pass)
 
 	// Add the password to the database.
 	server.db.Create(&PasswordConnection{
-		IPAddress: ip.String(),
+		IPAddress: ipStr,
 		Username:  username,
 		Password:  password,
 	}).Commit()
@@ -92,10 +98,15 @@ func (server *SSHServer) passwordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.
 	logman.Printf("%s %s pass:%s\n", ip.String(), username, password)
 	log.Printf("%s %s pass:%s\n", ip.String(), username, password)
 
-	// This is where and how I'd ideally add logic to mock logins and trap bad bots.
-	// if c.User() == "admin" && string(pass) == "admin" {
-	// 	return nil, nil
-	// }
+	// If a plugin manager was passed in and initialized, then call all of the plugins that offer a password login
+	// interception function.
+	if server.pluginManager != nil {
+		for _, pl := range server.pluginManager.GetPasswordIntercepts() {
+			if shouldLogin := pl.CallPasswordInterceptor(username, password, &ipObj); shouldLogin {
+				return nil, nil
+			}
+		}
+	}
 
 	return nil, fmt.Errorf("incorrect password for %q", c.User())
 }
@@ -158,7 +169,50 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 	go ssh.DiscardRequests(reqs)
 
 	for c := range chans {
-		fmt.Println(c)
+		if c.ChannelType() != "session" {
+			c.Reject(ssh.UnknownChannelType, "unknown channel type")
+			continue
+		}
+
+		channel, requests, err := c.Accept()
+
+		if err != nil {
+			log.Fatalf("Could not accept channel: %v", err)
+		}
+
+		go func(in <-chan *ssh.Request) {
+			for req := range in {
+				if req.Type == "shell" || req.Type == "pty" {
+					req.Reply(true, nil)
+				}
+			}
+		}(requests)
+
+		sessionTerm := term.NewTerminal(channel, "$ ")
+
+		go func() {
+			defer channel.Close()
+			for {
+				line, err := sessionTerm.ReadLine()
+
+				if err != nil {
+					break
+				}
+
+				if strings.Trim(line, " ") == "" {
+					continue
+				} else if commandFn, ok := server.pluginManager.GetCommand(line); ok {
+					commandFn([]string{}, func(res ...string) {
+						for _, v := range res {
+							sessionTerm.Write([]byte(v))
+						}
+					})
+				} else {
+					sessionTerm.Write([]byte(fmt.Sprintf("%s: command not found\n", line)))
+					fmt.Println("->", line)
+				}
+			}
+		}()
 	}
 
 	return true

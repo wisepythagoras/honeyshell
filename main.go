@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"log"
+
+	"github.com/wisepythagoras/honeyshell/plugin"
 )
 
 var logman *Logman
@@ -17,6 +19,8 @@ func main() {
 	port := flag.Int("port", 22, "The port the deamon should run on")
 	banner := flag.String("banner", "SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u3", "The banner for the SSH server")
 	key := flag.String("key", "", "The RSA key to use")
+	pluginsFolder := flag.String("plugins", "", "The path to the folder containing the plugins")
+	vfsPath := flag.String("vfs", "", "The path to the VFS (virtual file system) JSON file")
 	verbose := flag.Bool("verbose", false, "Print out debug messages")
 
 	// Parse the command line arguments (flags).
@@ -32,6 +36,9 @@ func main() {
 		log.Fatalf("Invalid port number %d\n", *port)
 	}
 
+	var pluginManager *plugin.PluginManager
+	var vfs *plugin.VFS
+
 	// Start the logman.
 	logman = GetLogmanInstance()
 	logman.Println("Starting Honeyshell")
@@ -43,12 +50,32 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	if len(*vfsPath) > 0 {
+		vfs, err = plugin.ReadVFSJSONFile(*vfsPath)
+
+		if err != nil {
+			log.Fatalln("Error:", err)
+		}
+	}
+
+	if len(*pluginsFolder) > 0 {
+		pluginManager = &plugin.PluginManager{
+			DB:        db,
+			PluginVFS: vfs,
+		}
+
+		if err := pluginManager.LoadPlugins(*pluginsFolder); err != nil {
+			log.Fatalln("Error:", err)
+		}
+	}
+
 	// Create a new SSH server object.
 	sshServer := &SSHServer{
-		port:    *port,
-		address: "0.0.0.0",
-		key:     *key,
-		banner:  *banner,
+		port:          *port,
+		address:       "0.0.0.0",
+		key:           *key,
+		banner:        *banner,
+		pluginManager: pluginManager,
 	}
 
 	// Initialize the SSH server.
