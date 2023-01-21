@@ -9,7 +9,7 @@ import (
 
 	"github.com/wisepythagoras/honeyshell/plugin"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 	"gorm.io/gorm"
 )
 
@@ -188,12 +188,12 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 			}
 		}(requests)
 
-		term := terminal.NewTerminal(channel, "$ ")
+		sessionTerm := term.NewTerminal(channel, "$ ")
 
 		go func() {
 			defer channel.Close()
 			for {
-				line, err := term.ReadLine()
+				line, err := sessionTerm.ReadLine()
 
 				if err != nil {
 					break
@@ -204,11 +204,11 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 				} else if commandFn, ok := server.pluginManager.GetCommand(line); ok {
 					commandFn([]string{}, func(res ...string) {
 						for _, v := range res {
-							term.Write([]byte(v))
+							sessionTerm.Write([]byte(v))
 						}
 					})
 				} else {
-					term.Write([]byte(fmt.Sprintf("%s: command not found\n", line)))
+					sessionTerm.Write([]byte(fmt.Sprintf("%s: command not found\n", line)))
 					fmt.Println("->", line)
 				}
 			}

@@ -3,9 +3,10 @@ package plugin
 import "gorm.io/gorm"
 
 type PluginManager struct {
+	DB              *gorm.DB
+	PluginVFS       *VFS
 	plugins         []*Plugin
 	passwordPlugins []*Plugin
-	DB              *gorm.DB
 	commandMap      map[string]CommandFn
 }
 
@@ -25,6 +26,8 @@ func (pm *PluginManager) LoadPlugins(path string) error {
 		if err != nil {
 			return err
 		}
+
+		pl.SetVFS(pm.PluginVFS)
 
 		if pl.HasPasswordIntercept() {
 			pm.passwordPlugins = append(pm.passwordPlugins, pl)

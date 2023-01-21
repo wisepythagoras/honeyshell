@@ -37,6 +37,7 @@ func main() {
 	}
 
 	var pluginManager *plugin.PluginManager
+	var vfs *plugin.VFS
 
 	// Start the logman.
 	logman = GetLogmanInstance()
@@ -45,16 +46,27 @@ func main() {
 	// Connect to the database.
 	db, err := ConnectDB(*verbose)
 
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	if len(*pluginsFolder) > 0 {
-		pluginManager = &plugin.PluginManager{DB: db}
+		pluginManager = &plugin.PluginManager{
+			DB:        db,
+			PluginVFS: vfs,
+		}
 
 		if err := pluginManager.LoadPlugins(*pluginsFolder); err != nil {
 			log.Fatalln("Error:", err)
 		}
 	}
 
-	if err != nil {
-		log.Fatalln(err)
+	if len(*vfsPath) > 0 {
+		vfs, err = plugin.ReadVFSJSONFile(*vfsPath)
+
+		if err != nil {
+			log.Fatalln("Error:", err)
+		}
 	}
 
 	// Create a new SSH server object.

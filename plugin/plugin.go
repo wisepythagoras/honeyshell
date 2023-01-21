@@ -19,6 +19,7 @@ type Plugin struct {
 	L      *lua.LState
 	Config *Config
 	DB     *gorm.DB
+	vfs    *VFS
 }
 
 func (p *Plugin) GetPath(withMain bool) string {
@@ -72,6 +73,10 @@ func (p *Plugin) Init() error {
 	}
 
 	return nil
+}
+
+func (p *Plugin) SetVFS(vfs *VFS) {
+	p.vfs = vfs
 }
 
 func (p *Plugin) HasPasswordIntercept() bool {
