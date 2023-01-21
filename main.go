@@ -50,6 +50,14 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	if len(*vfsPath) > 0 {
+		vfs, err = plugin.ReadVFSJSONFile(*vfsPath)
+
+		if err != nil {
+			log.Fatalln("Error:", err)
+		}
+	}
+
 	if len(*pluginsFolder) > 0 {
 		pluginManager = &plugin.PluginManager{
 			DB:        db,
@@ -57,14 +65,6 @@ func main() {
 		}
 
 		if err := pluginManager.LoadPlugins(*pluginsFolder); err != nil {
-			log.Fatalln("Error:", err)
-		}
-	}
-
-	if len(*vfsPath) > 0 {
-		vfs, err = plugin.ReadVFSJSONFile(*vfsPath)
-
-		if err != nil {
 			log.Fatalln("Error:", err)
 		}
 	}
