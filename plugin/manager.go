@@ -1,6 +1,11 @@
 package plugin
 
-import "gorm.io/gorm"
+import (
+	"fmt"
+	"regexp"
+
+	"gorm.io/gorm"
+)
 
 type PluginManager struct {
 	DB              *gorm.DB
@@ -49,6 +54,21 @@ func (pm *PluginManager) GetCommand(cmd string) (CommandFn, bool) {
 	}
 
 	return nil, false
+}
+
+func (pm *PluginManager) MatchCommand(part string) ([]CommandFn, []string) {
+	commands := make([]string, 0)
+	cmdFns := make([]CommandFn, 0)
+	reg := regexp.MustCompile(fmt.Sprintf("^%s", part))
+
+	for cmd, cmdFn := range pm.commandMap {
+		if reg.MatchString(cmd) {
+			commands = append(commands, cmd)
+			cmdFns = append(cmdFns, cmdFn)
+		}
+	}
+
+	return cmdFns, commands
 }
 
 func (pm *PluginManager) GetPasswordIntercepts() []*Plugin {

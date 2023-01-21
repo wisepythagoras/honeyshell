@@ -189,6 +189,19 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 		}(requests)
 
 		sessionTerm := term.NewTerminal(channel, "$ ")
+		sessionTerm.AutoCompleteCallback = func(line string, pos int, key rune) (newLine string, newPos int, ok bool) {
+			if key == 9 {
+				_, matchingCmds := server.pluginManager.MatchCommand(line)
+
+				for _, cmd := range matchingCmds {
+					sessionTerm.Write([]byte(cmd))
+				}
+
+				sessionTerm.Write([]byte("\n"))
+			}
+
+			return line, pos, ok
+		}
 
 		go func() {
 			defer channel.Close()
