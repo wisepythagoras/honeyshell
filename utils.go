@@ -116,6 +116,8 @@ func ParseCmdArgs(argsStr string) map[string]any {
 			for _, char := range key {
 				args[string(char)] = true
 			}
+		} else {
+			args["raw"] = part
 		}
 	}
 

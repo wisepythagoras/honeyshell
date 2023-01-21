@@ -20,20 +20,26 @@ type VFSFile struct {
 }
 
 // Find will check the current file or its descendants for the file with name `name` and type `t`.
-func (f *VFSFile) Find(name string, t int) (string, *VFSFile) {
-	if name == f.Name && (f.Type == t || t == T_ANY) {
-		return "/" + f.Name, f
+func (f *VFSFile) Find(name, path string, t int) (string, *VFSFile) {
+	if name == path+f.Name && (f.Type == t || t == T_ANY) {
+		return path + f.Name, f
 	}
 
 	if f.Type == T_DIR {
 		for _, file := range f.Files {
-			if filePath, foundFile := file.Find(name, t); foundFile != nil {
-				return "/" + f.Name + filePath, foundFile
+			newPath := path + f.Name + "/"
+
+			if filePath, foundFile := file.Find(name, newPath, t); foundFile != nil {
+				return f.Name + filePath, foundFile
 			}
 		}
 	}
 
 	return "", nil
+}
+
+func (f *VFSFile) StrMode() string {
+	return f.Mode.String()
 }
 
 type VFS struct {
@@ -42,7 +48,11 @@ type VFS struct {
 
 // Find tries to find a specific file in the virtual file system.
 func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
-	return vfs.Root.Find(name, t)
+	if name == "/" {
+		return "", &vfs.Root
+	}
+
+	return vfs.Root.Find(name, "", t)
 }
 
 // ReadVFSJSONFile reads the JSON file which contains the the virtual file system model.
