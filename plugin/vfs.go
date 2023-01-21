@@ -30,7 +30,7 @@ func (f *VFSFile) Find(name, path string, t int) (string, *VFSFile) {
 			newPath := path + f.Name + "/"
 
 			if filePath, foundFile := file.Find(name, newPath, t); foundFile != nil {
-				return f.Name + filePath, foundFile
+				return filePath, foundFile
 			}
 		}
 	}
@@ -52,7 +52,7 @@ func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
 	if name == "/" {
 		return "", &vfs.Root
 	} else if name == "~" {
-		return vfs.Find(vfs.Home, T_ANY)
+		return vfs.Find(vfs.Home, T_DIR)
 	}
 
 	return vfs.Root.Find(name, "", t)
