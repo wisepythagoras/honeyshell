@@ -26,6 +26,8 @@ func (nm *nativeModule) importFn(module string) *lua.LTable {
 		return native.JsonModule(nm.L)
 	case "strings":
 		return native.StringsModule(nm.L)
+	case "filepath":
+		return native.FilepathModule(nm.L)
 	default:
 		log.Fatalf("No module %q found", module)
 	}
