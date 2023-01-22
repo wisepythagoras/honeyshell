@@ -94,14 +94,8 @@ func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
 
 		name = filepath.Clean(name)
 
-		if name == "." {
-			name = ".."
-		} else if name == ".." {
-			name = "../.."
-		}
-
 		if strings.HasPrefix(name, ".") {
-			return vfs.searchAbsolutePath(filepath.Join(vfs.Home, name), t)
+			return vfs.searchAbsolutePath(filepath.Join(vfs.Home, "../", name), t)
 		}
 
 		// TODO: Handle the edge case of ~/.. here.
