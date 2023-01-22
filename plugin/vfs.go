@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,6 +51,39 @@ type VFS struct {
 	PWD  string  `json:"-"`
 }
 
+func (vfs *VFS) searchDotPath(name string, t int) (string, *VFSFile) {
+	cwdPath, cwdDir := vfs.Find(vfs.PWD, T_DIR)
+
+	if name == "." || name == "./" {
+		return cwdPath, cwdDir
+	}
+
+	// fullPath := filepath.Join(vfs.PWD, name)
+	sanitizedPath := strings.ReplaceAll(name, "./", "{}/")
+	foundPath, foundFile := cwdDir.Find(sanitizedPath, "", t)
+
+	if foundFile != nil {
+		foundPath = strings.ReplaceAll(foundPath, "{}/", "./")
+	}
+
+	return foundPath, foundFile
+}
+
+func (vfs *VFS) searchDotDotPath(name string, t int) (string, *VFSFile) {
+	fullPath := filepath.Join(vfs.PWD, name)
+	return vfs.Find(fullPath, T_ANY)
+}
+
+func (vfs *VFS) searchAbsolutePath(name string, t int) (string, *VFSFile) {
+	sanitizedPath := filepath.Join(name)
+
+	if sanitizedPath == "/" {
+		return "", &vfs.Root
+	}
+
+	return vfs.Root.Find(sanitizedPath, "", t)
+}
+
 // Find tries to find a specific file in the virtual file system.
 func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
 	if strings.HasPrefix(name, "~") {
@@ -57,6 +91,19 @@ func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
 
 		if name == "~" || name == "~/" {
 			return strings.ReplaceAll(homePath, "/home/{}", "~"), homeDir
+		}
+
+		name = filepath.Clean(name)
+
+		if name == "." {
+			name = ".."
+		} else if name == ".." {
+			name = "../.."
+		}
+		fmt.Println(name)
+
+		if strings.HasPrefix(name, ".") {
+			return vfs.searchAbsolutePath(filepath.Join(vfs.Home, name), t)
 		}
 
 		// TODO: Handle the edge case of ~/.. here.
@@ -69,33 +116,12 @@ func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
 
 		return foundPath, foundFile
 	} else if name == "." || strings.HasPrefix(name, "./") {
-		cwdPath, cwdDir := vfs.Find(vfs.PWD, T_DIR)
-
-		if name == "." || name == "./" {
-			return cwdPath, cwdDir
-		}
-
-		// fullPath := filepath.Join(vfs.PWD, name)
-		sanitizedPath := strings.ReplaceAll(name, "./", "{}/")
-		foundPath, foundFile := cwdDir.Find(sanitizedPath, "", t)
-
-		if foundFile != nil {
-			foundPath = strings.ReplaceAll(foundPath, "{}/", "./")
-		}
-
-		return foundPath, foundFile
+		return vfs.searchDotPath(name, t)
 	} else if name == ".." || strings.HasPrefix(name, "../") {
-		fullPath := filepath.Join(vfs.PWD, name)
-		return vfs.Find(fullPath, T_ANY)
+		return vfs.searchDotDotPath(name, t)
 	}
 
-	sanitizedPath := filepath.Join(name)
-
-	if sanitizedPath == "/" {
-		return "", &vfs.Root
-	}
-
-	return vfs.Root.Find(sanitizedPath, "", t)
+	return vfs.searchAbsolutePath(name, t)
 }
 
 // ReadVFSJSONFile reads the JSON file which contains the the virtual file system model.
