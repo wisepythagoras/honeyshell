@@ -194,12 +194,15 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 			Username: conn.User(),
 			Term:     sessionTerm,
 			Manager:  server.pluginManager,
-			PWD:      server.pluginManager.PluginVFS.Home,
 		}
 		sessionTerm.AutoCompleteCallback = session.AutoCompleteCallback
 
+		// Change over to the home directory so that the session starts from there.
+		session.Chdir(server.pluginManager.PluginVFS.Home)
+
 		go func() {
 			defer channel.Close()
+
 			for {
 				line, err := sessionTerm.ReadLine()
 
