@@ -9,6 +9,7 @@ type Session struct {
 	Username string
 	Term     *term.Terminal
 	Manager  *PluginManager
+	PWD      string
 }
 
 func (s *Session) AutoCompleteCallback(line string, pos int, key rune) (newLine string, newPos int, ok bool) {
@@ -29,4 +30,12 @@ func (s *Session) TermWrite(data ...string) {
 	for _, v := range data {
 		s.Term.Write([]byte(v))
 	}
+}
+
+func (s *Session) Chdir(newPath string) {
+	s.PWD = newPath
+}
+
+func (s *Session) GetPWD() string {
+	return s.PWD
 }

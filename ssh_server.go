@@ -194,6 +194,7 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 			Username: conn.User(),
 			Term:     sessionTerm,
 			Manager:  server.pluginManager,
+			PWD:      server.pluginManager.PluginVFS.Home,
 		}
 		sessionTerm.AutoCompleteCallback = session.AutoCompleteCallback
 

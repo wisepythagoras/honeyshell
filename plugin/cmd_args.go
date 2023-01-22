@@ -51,3 +51,9 @@ func (args *CmdArgs) Get(key string) any {
 
 	return nil
 }
+
+func (args *CmdArgs) ForEach(callback func(string, any)) {
+	for k, v := range args.argMap {
+		callback(k, v)
+	}
+}
