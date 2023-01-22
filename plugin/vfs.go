@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -100,7 +99,6 @@ func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
 		} else if name == ".." {
 			name = "../.."
 		}
-		fmt.Println(name)
 
 		if strings.HasPrefix(name, ".") {
 			return vfs.searchAbsolutePath(filepath.Join(vfs.Home, name), t)
