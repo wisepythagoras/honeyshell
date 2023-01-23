@@ -104,6 +104,8 @@ func (vfs *VFS) FindFile(path string) (string, *VFSFile, error) {
 
 	if path == "/" {
 		return "/", &vfs.Root, nil
+	} else if strings.HasPrefix(path, "/home/"+vfs.Username) {
+		path = strings.Replace(path, "/home/"+vfs.Username, "/home/{}", 1)
 	}
 
 	parts := strings.Split(path, "/")
