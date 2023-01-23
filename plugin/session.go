@@ -33,6 +33,7 @@ func (s *Session) TermWrite(data ...string) {
 }
 
 func (s *Session) Chdir(newPath string) {
+	// TODO: Validate the path here.
 	s.VFS.PWD = newPath
 	s.pwd = newPath
 }

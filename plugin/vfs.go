@@ -45,9 +45,10 @@ func (f *VFSFile) StrMode() string {
 }
 
 type VFS struct {
-	Root VFSFile `json:"root"`
-	Home string  `json:"home"`
-	PWD  string  `json:"-"`
+	Root     VFSFile `json:"root"`
+	Home     string  `json:"home"`
+	PWD      string  `json:"-"`
+	Username string  `json:"-"`
 }
 
 func (vfs *VFS) searchDotPath(name string, t int) (string, *VFSFile) {
@@ -57,7 +58,6 @@ func (vfs *VFS) searchDotPath(name string, t int) (string, *VFSFile) {
 		return cwdPath, cwdDir
 	}
 
-	// fullPath := filepath.Join(vfs.PWD, name)
 	sanitizedPath := strings.ReplaceAll(name, "./", "{}/")
 	foundPath, foundFile := cwdDir.Find(sanitizedPath, "", t)
 
@@ -89,13 +89,19 @@ func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
 		homePath, homeDir := vfs.Find(vfs.Home, T_DIR)
 
 		if name == "~" || name == "~/" {
-			return strings.ReplaceAll(homePath, "/home/{}", "~"), homeDir
+			return homePath, homeDir
 		}
 
 		name = filepath.Clean(name)
 
-		if strings.HasPrefix(name, ".") {
-			return vfs.searchAbsolutePath(filepath.Join(vfs.Home, "../", name), t)
+		if !strings.HasPrefix(name, "~") {
+			absPath := filepath.Join(vfs.Home, "../", name)
+
+			if strings.Trim(vfs.Username, " ") != "" && strings.HasPrefix(absPath, "/home/"+vfs.Username) {
+				absPath = strings.ReplaceAll(absPath, "/home/"+vfs.Username, "/home/{}")
+			}
+
+			return vfs.searchAbsolutePath(absPath, t)
 		}
 
 		// TODO: Handle the edge case of ~/.. here.
@@ -103,7 +109,7 @@ func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
 		foundPath, foundFile := homeDir.Find(sanitizedPath, "", t)
 
 		if foundFile != nil {
-			foundPath = strings.ReplaceAll(foundPath, "{}/", "~/")
+			foundPath = strings.ReplaceAll(foundPath, "{}", homePath)
 		}
 
 		return foundPath, foundFile

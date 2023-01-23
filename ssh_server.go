@@ -188,9 +188,12 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 			}
 		}(requests)
 
+		sessionVFS := *server.pluginManager.PluginVFS
+		sessionVFS.Username = conn.User()
+
 		sessionTerm := term.NewTerminal(channel, "$ ")
 		session := &plugin.Session{
-			VFS:      server.pluginManager.PluginVFS,
+			VFS:      &sessionVFS,
 			Username: conn.User(),
 			Term:     sessionTerm,
 			Manager:  server.pluginManager,
