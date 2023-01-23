@@ -87,6 +87,10 @@ func (p *Plugin) HasCommandDefined() bool {
 	return len(p.Config.CommandCallbacks) > 0
 }
 
+func (p *Plugin) HasPromptFn() bool {
+	return p.Config.PromptFn != nil
+}
+
 func (p *Plugin) Commands() map[string]CommandFn {
 	return p.Config.CommandCallbacks
 }

@@ -13,6 +13,7 @@ type PluginManager struct {
 	plugins         []*Plugin
 	passwordPlugins []*Plugin
 	commandMap      map[string]CommandFn
+	PromptPlugin    PromptFn
 }
 
 func (pm *PluginManager) LoadPlugins(path string) error {
@@ -43,9 +44,25 @@ func (pm *PluginManager) LoadPlugins(path string) error {
 				pm.commandMap[cmd] = commandFn
 			}
 		}
+
+		if pl.HasPromptFn() {
+			pm.PromptPlugin = pl.Config.PromptFn
+		}
+	}
+
+	if pm.PromptPlugin == nil {
+		pm.PromptPlugin = pm.defaultPrompt
 	}
 
 	return nil
+}
+
+func (pm *PluginManager) defaultPrompt(s *Session) string {
+	if s.Username == "root" {
+		return "# "
+	}
+
+	return "$ "
 }
 
 func (pm *PluginManager) GetCommand(cmd string) (CommandFn, bool) {

@@ -9,14 +9,17 @@ type TermWriteFn func(...string)
 
 type CommandFn func(*CmdArgs, *Session)
 type PasswordInterceptFn func(string, string, *net.IP) bool
+type PromptFn func(*Session) string
 
 type Config struct {
 	CommandCallbacks    map[string]CommandFn
 	PasswordInterceptor PasswordInterceptFn
+	PromptFn            PromptFn
 }
 
 func (c *Config) Init() {
 	c.CommandCallbacks = make(map[string]CommandFn)
+
 }
 
 func (c *Config) RegisterCommand(cmd string, cmdFn CommandFn) bool {
@@ -33,4 +36,8 @@ func (c *Config) RegisterCommand(cmd string, cmdFn CommandFn) bool {
 
 func (c *Config) RegisterPasswordIntercept(interceptor PasswordInterceptFn) {
 	c.PasswordInterceptor = interceptor
+}
+
+func (c *Config) RegisterPrompt(promptFn PromptFn) {
+	c.PromptFn = promptFn
 }

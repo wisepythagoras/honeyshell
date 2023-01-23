@@ -200,6 +200,9 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 		}
 		sessionTerm.AutoCompleteCallback = session.AutoCompleteCallback
 
+		// Set the initial prompt.
+		sessionTerm.SetPrompt(server.pluginManager.PromptPlugin(session))
+
 		// Change over to the home directory so that the session starts from there.
 		session.Chdir(server.pluginManager.PluginVFS.Home)
 
@@ -232,6 +235,8 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 					sessionTerm.Write([]byte(fmt.Sprintf("%s: command not found\n", line)))
 					fmt.Println("->", line)
 				}
+
+				sessionTerm.SetPrompt(server.pluginManager.PromptPlugin(session))
 			}
 		}()
 	}
