@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,31 +14,52 @@ const T_SYMLINK = 3
 const T_ANY = 4
 
 type VFSFile struct {
-	Type     int         `json:"type"`
-	Name     string      `json:"name"`
-	Files    []VFSFile   `json:"files"`
-	Contents string      `json:"contents"`
-	Mode     os.FileMode `json:"mode"`
-	Owner    string      `json:"owner"`
+	Type     int                `json:"type"`
+	Name     string             `json:"name"`
+	Files    map[string]VFSFile `json:"files"`
+	Contents string             `json:"contents"`
+	Mode     os.FileMode        `json:"mode"`
+	Owner    string             `json:"owner"`
 }
 
-// Find will check the current file or its descendants for the file with name `name` and type `t`.
-func (f *VFSFile) Find(name, path string, t int) (string, *VFSFile) {
-	if name == path+f.Name && (f.Type == t || t == T_ANY) {
-		return path + f.Name, f
-	}
+func (f *VFSFile) findFile(name string, rest []string) (string, *VFSFile, error) {
+	if name == f.Name && len(rest) == 0 {
+		return name, f, nil
+	} else if name == f.Name && len(rest) > 0 {
+		if f.Type != T_DIR {
+			return "", nil, fmt.Errorf("file not a directory")
+		}
 
-	if f.Type == T_DIR {
-		for _, file := range f.Files {
-			newPath := path + f.Name + "/"
+		if file, ok := f.Files[rest[0]]; ok {
+			newPath, newFile, err := file.findFile(rest[0], rest[1:])
 
-			if filePath, foundFile := file.Find(name, newPath, t); foundFile != nil {
-				return filePath, foundFile
+			if err != nil {
+				return "", nil, err
 			}
+
+			if name == "" {
+				name = "/"
+			}
+
+			return filepath.Join(name, newPath), newFile, nil
 		}
 	}
 
-	return "", nil
+	return "", nil, fmt.Errorf("file not found")
+}
+
+func (f *VFSFile) ForEach(callback func(*VFSFile, int)) {
+	if f.Type == T_FILE {
+		callback(f, 0)
+		return
+	}
+
+	i := 0
+
+	for _, file := range f.Files {
+		callback(&file, i)
+		i++
+	}
 }
 
 func (f *VFSFile) StrMode() string {
@@ -51,75 +73,42 @@ type VFS struct {
 	Username string  `json:"-"`
 }
 
-func (vfs *VFS) searchDotPath(name string, t int) (string, *VFSFile) {
-	cwdPath, cwdDir := vfs.Find(vfs.PWD, T_DIR)
-
-	if name == "." || name == "./" {
-		return cwdPath, cwdDir
+func (vfs *VFS) resolveDotPath(path string) string {
+	if path == "." || path == "./" {
+		return vfs.PWD
 	}
 
-	sanitizedPath := strings.ReplaceAll(name, "./", "{}/")
-	foundPath, foundFile := cwdDir.Find(sanitizedPath, "", t)
-
-	if foundFile != nil {
-		foundPath = strings.ReplaceAll(foundPath, "{}/", "./")
-	}
-
-	return foundPath, foundFile
+	return filepath.Join(vfs.PWD, path)
 }
 
-func (vfs *VFS) searchDotDotPath(name string, t int) (string, *VFSFile) {
-	fullPath := filepath.Join(vfs.PWD, name)
-	return vfs.Find(fullPath, T_ANY)
-}
-
-func (vfs *VFS) searchAbsolutePath(name string, t int) (string, *VFSFile) {
-	sanitizedPath := filepath.Join(name)
-
-	if sanitizedPath == "/" {
-		return "", &vfs.Root
+func (vfs *VFS) FindFile(path string) (string, *VFSFile, error) {
+	if path == "" {
+		path = "/"
+	} else if len(path) > 2 && strings.HasSuffix(path, "/") {
+		path = path[:len(path)-1]
 	}
 
-	return vfs.Root.Find(sanitizedPath, "", t)
-}
-
-// Find tries to find a specific file in the virtual file system.
-func (vfs *VFS) Find(name string, t int) (string, *VFSFile) {
-	if strings.HasPrefix(name, "~") {
-		homePath, homeDir := vfs.Find(vfs.Home, T_DIR)
-
-		if name == "~" || name == "~/" {
-			return homePath, homeDir
+	if strings.HasPrefix(path, "~") {
+		if path == "~" || path == "~/" || path == "~/." {
+			path = vfs.Home
+		} else {
+			path = filepath.Join(vfs.Home, strings.Replace(path, "~/", "", 1))
 		}
-
-		name = filepath.Clean(name)
-
-		if !strings.HasPrefix(name, "~") {
-			absPath := filepath.Join(vfs.Home, "../", name)
-
-			if strings.Trim(vfs.Username, " ") != "" && strings.HasPrefix(absPath, "/home/"+vfs.Username) {
-				absPath = strings.ReplaceAll(absPath, "/home/"+vfs.Username, "/home/{}")
-			}
-
-			return vfs.searchAbsolutePath(absPath, t)
-		}
-
-		// TODO: Handle the edge case of ~/.. here.
-		sanitizedPath := strings.ReplaceAll(name, "~/", "{}/")
-		foundPath, foundFile := homeDir.Find(sanitizedPath, "", t)
-
-		if foundFile != nil {
-			foundPath = strings.ReplaceAll(foundPath, "{}", homePath)
-		}
-
-		return foundPath, foundFile
-	} else if name == "." || strings.HasPrefix(name, "./") {
-		return vfs.searchDotPath(name, t)
-	} else if name == ".." || strings.HasPrefix(name, "../") {
-		return vfs.searchDotDotPath(name, t)
+	} else if path == "." || strings.HasPrefix(path, "./") {
+		path = vfs.resolveDotPath(path)
+	} else if path == ".." || strings.HasPrefix(path, "../") {
+		path = filepath.Join(vfs.PWD, path)
+	} else if !strings.HasPrefix(path, "/") {
+		path = filepath.Join(vfs.PWD, path)
 	}
 
-	return vfs.searchAbsolutePath(name, t)
+	if path == "/" {
+		return "/", &vfs.Root, nil
+	}
+
+	parts := strings.Split(path, "/")
+
+	return vfs.Root.findFile(parts[0], parts[1:])
 }
 
 // ReadVFSJSONFile reads the JSON file which contains the the virtual file system model.
