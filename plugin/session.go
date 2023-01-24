@@ -32,10 +32,17 @@ func (s *Session) TermWrite(data ...string) {
 	}
 }
 
-func (s *Session) Chdir(newPath string) {
-	// TODO: Validate the path here.
-	s.VFS.PWD = newPath
-	s.pwd = newPath
+func (s *Session) Chdir(newPath string) error {
+	path, _, err := s.VFS.FindFile(newPath)
+
+	if err != nil {
+		return err
+	}
+
+	s.VFS.PWD = path
+	s.pwd = path
+
+	return nil
 }
 
 func (s *Session) GetPWD() string {
