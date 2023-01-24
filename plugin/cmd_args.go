@@ -1,6 +1,9 @@
 package plugin
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 type CmdArgs struct {
 	RawArgs string
@@ -50,6 +53,17 @@ func (args *CmdArgs) Get(key string) any {
 	}
 
 	return nil
+}
+
+func (args *CmdArgs) Array() []string {
+	re := regexp.MustCompile(`(\s+)`)
+	rawArgs := strings.Trim(re.ReplaceAllString(args.RawArgs, " "), " ")
+	return strings.Split(rawArgs, " ")
+}
+
+func (args *CmdArgs) ArrayWithCommand(cmd string) []string {
+	cmdArgs := []string{cmd}
+	return append(cmdArgs, args.Array()...)
 }
 
 func (args *CmdArgs) ForEach(callback func(string, any)) {
