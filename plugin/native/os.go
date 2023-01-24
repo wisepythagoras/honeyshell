@@ -74,6 +74,9 @@ func OsModule(L *lua.LState) *lua.LTable {
 	L.SetField(module, "O_SYNC", luar.New(L, os.O_SYNC))
 	L.SetField(module, "O_TRUNC", luar.New(L, os.O_TRUNC))
 	L.SetField(module, "O_WRONLY", luar.New(L, os.O_WRONLY))
+	L.SetField(module, "Stdout", luar.New(L, os.Stdout))
+	L.SetField(module, "Stderr", luar.New(L, os.Stderr))
+	L.SetField(module, "Stdin", luar.New(L, os.Stdin))
 
 	return module
 }

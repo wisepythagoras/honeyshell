@@ -41,6 +41,8 @@ func (p *Plugin) Init() error {
 
 	p.L.SetGlobal("db", luar.New(p.L, native.DBModule(p.L, p.DB)))
 	p.L.SetGlobal("dirname", luar.New(p.L, p.GetPath(false)))
+	p.L.SetGlobal("toBytes", luar.New(p.L, stringToBytes))
+	p.L.SetGlobal("toString", luar.New(p.L, bytesToString))
 
 	// Allow requiring lua files from the plugin's directory.
 	pkg := p.L.GetGlobal("package")

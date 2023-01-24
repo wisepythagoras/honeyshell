@@ -55,3 +55,11 @@ func LoadPlugins(path string, db *gorm.DB) ([]*Plugin, error) {
 
 	return plugins, nil
 }
+
+func stringToBytes(str string) []byte {
+	return []byte(str)
+}
+
+func bytesToString(b []byte) string {
+	return string(b)
+}

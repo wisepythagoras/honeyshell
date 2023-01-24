@@ -10,6 +10,9 @@ import (
 func FmtModule(L *lua.LState) *lua.LTable {
 	module := L.NewTable()
 
+	L.SetField(module, "Fprint", luar.New(L, fmt.Fprint))
+	L.SetField(module, "Fprintf", luar.New(L, fmt.Fprintf))
+	L.SetField(module, "Fprintln", luar.New(L, fmt.Fprintln))
 	L.SetField(module, "Print", luar.New(L, fmt.Print))
 	L.SetField(module, "Printf", luar.New(L, fmt.Printf))
 	L.SetField(module, "Println", luar.New(L, fmt.Println))

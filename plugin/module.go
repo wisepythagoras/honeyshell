@@ -28,6 +28,8 @@ func (nm *nativeModule) importFn(module string) *lua.LTable {
 		return native.StringsModule(nm.L)
 	case "filepath":
 		return native.FilepathModule(nm.L)
+	case "tabwriter":
+		return native.TabWriterModule(nm.L)
 	default:
 		log.Fatalf("No module %q found", module)
 	}
