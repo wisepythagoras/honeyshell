@@ -32,7 +32,7 @@ func (args *CmdArgs) Parse() {
 		} else if part[0] == '-' {
 			key := strings.Trim(part, "-")
 
-			if i < len(parts)-1 && parts[i+1][0] != '-' {
+			if i < len(parts)-1 && len(parts[i+1]) > 0 && parts[i+1][0] != '-' {
 				args.argMap[key] = parts[i+1]
 			}
 
