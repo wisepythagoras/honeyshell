@@ -1,10 +1,10 @@
-package main
+package core
 
 import (
 	"encoding/hex"
+
 	"golang.org/x/crypto/sha3"
 )
-
 
 // GetSHA3256Hash returns the SHA3-256 hash of a given string.
 func GetSHA3256Hash(str []byte) ([]byte, error) {
@@ -24,4 +24,3 @@ func GetSHA3256Hash(str []byte) ([]byte, error) {
 func ByteArrayToHex(payload []byte) string {
 	return hex.EncodeToString(payload)
 }
-

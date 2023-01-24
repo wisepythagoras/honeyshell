@@ -2,12 +2,14 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
+	"github.com/wisepythagoras/honeyshell/core"
 	"github.com/wisepythagoras/honeyshell/plugin"
 )
 
-var logman *Logman
+var logman *core.Logman
 
 // https://github.com/karfield/ssh2go/
 // http://api.libssh.org/master/group__libssh__session.html
@@ -40,11 +42,11 @@ func main() {
 	var vfs *plugin.VFS
 
 	// Start the logman.
-	logman = GetLogmanInstance()
+	logman = core.GetLogmanInstance()
 	logman.Println("Starting Honeyshell")
 
 	// Connect to the database.
-	db, err := ConnectDB(*verbose)
+	db, err := core.ConnectDB(*verbose)
 
 	if err != nil {
 		log.Fatalln(err)
@@ -70,12 +72,13 @@ func main() {
 	}
 
 	// Create a new SSH server object.
-	sshServer := &SSHServer{
-		port:          *port,
-		address:       "0.0.0.0",
-		key:           *key,
-		banner:        *banner,
-		pluginManager: pluginManager,
+	sshServer := &core.SSHServer{
+		Port:          *port,
+		Address:       "0.0.0.0",
+		Key:           *key,
+		Banner:        *banner,
+		PluginManager: pluginManager,
+		Logger:        logman,
 	}
 
 	// Initialize the SSH server.
@@ -91,13 +94,20 @@ func main() {
 	if *username != "" {
 		log.Printf("Changing permissions to user '%s'\n", *username)
 
+		gid, uid, err := core.ChangePermissions(*username)
+
 		// If this fails it means that either the program wasn't run with 'sudo.' or the user
 		// doesn't have sufficient permissions.
-		if !ChangePermissions(*username) {
-			err := "Either the user does not exist or you don't have adequate permissions"
-			log.Println(err)
-			logman.Println(err)
+		if err != nil {
+			errStr := fmt.Sprintf("Error: %s", err)
+			log.Println(errStr)
+			logman.Println(errStr)
 			return
+		} else {
+			log.Println("User set to", *username)
+			logman.Println("User set to", *username)
+			log.Println(*username, "has gid:", gid, "and uid:", uid)
+			logman.Println(*username, "has gid:", gid, "and uid:", uid)
 		}
 	}
 

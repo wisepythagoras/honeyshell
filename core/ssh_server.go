@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"fmt"
@@ -15,14 +15,15 @@ import (
 
 // SSHServer : This is the object that defines an SSH server.
 type SSHServer struct {
+	Logger        *Logman
 	db            *gorm.DB
-	port          int
-	address       string
-	key           string
-	banner        string
+	Port          int
+	Address       string
+	Key           string
+	Banner        string
 	config        *ssh.ServerConfig
 	listener      net.Listener
-	pluginManager *plugin.PluginManager
+	PluginManager *plugin.PluginManager
 }
 
 // Init Initialize the SSH server.
@@ -30,16 +31,16 @@ func (server *SSHServer) Init() bool {
 	server.config = &ssh.ServerConfig{
 		PasswordCallback:  server.passwordChecker,
 		PublicKeyCallback: server.publicKeyChecker,
-		ServerVersion:     server.banner,
+		ServerVersion:     server.Banner,
 		AuthLogCallback:   server.authLogHandler,
 	}
 
 	// Now read the server's private key.
-	privateKeyBytes, err := os.ReadFile(server.key)
+	privateKeyBytes, err := os.ReadFile(server.Key)
 
 	if err != nil {
 		log.Println("Failed to load private key", err)
-		logman.Println("Failed to load private key", err)
+		server.Logger.Println("Failed to load private key", err)
 		return false
 	}
 
@@ -47,23 +48,23 @@ func (server *SSHServer) Init() bool {
 
 	if err != nil {
 		log.Println("Failed to parse private key", err)
-		logman.Println("Failed to parse private key", err)
+		server.Logger.Println("Failed to parse private key", err)
 		return false
 	}
 
 	server.config.AddHostKey(privateKey)
 
 	// Listen on the provided port.
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", server.port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", server.Port))
 	server.listener = listener
 
 	if err != nil {
 		log.Println("Unable to listen on the provided port", err)
-		logman.Println("Unable to listen on the provided port", err)
+		server.Logger.Println("Unable to listen on the provided port", err)
 	}
 
-	log.Println("Starting on port", server.port)
-	logman.Println("Starting on port", server.port)
+	log.Println("Starting on port", server.Port)
+	server.Logger.Println("Starting on port", server.Port)
 
 	return true
 }
@@ -75,7 +76,7 @@ func (server *SSHServer) authLogHandler(c ssh.ConnMetadata, method string, err e
 		clientBanner := string(c.ClientVersion())
 
 		log.Println(ip.String(), "client connected with", clientBanner, "for user", c.User())
-		logman.Println(ip.String(), "client connected with", clientBanner, "for user", c.User())
+		server.Logger.Println(ip.String(), "client connected with", clientBanner, "for user", c.User())
 	}
 }
 
@@ -95,13 +96,13 @@ func (server *SSHServer) passwordChecker(c ssh.ConnMetadata, pass []byte) (*ssh.
 		Password:  password,
 	}).Commit()
 
-	logman.Printf("%s %s pass:%s\n", ip.String(), username, password)
+	server.Logger.Printf("%s %s pass:%s\n", ip.String(), username, password)
 	log.Printf("%s %s pass:%s\n", ip.String(), username, password)
 
 	// If a plugin manager was passed in and initialized, then call all of the plugins that offer a password login
 	// interception function.
-	if server.pluginManager != nil {
-		for _, pl := range server.pluginManager.GetPasswordIntercepts() {
+	if server.PluginManager != nil {
+		for _, pl := range server.PluginManager.GetPasswordIntercepts() {
 			if shouldLogin := pl.CallPasswordInterceptor(username, password, &ipObj); shouldLogin {
 				return nil, nil
 			}
@@ -121,7 +122,7 @@ func (server *SSHServer) publicKeyChecker(c ssh.ConnMetadata, pubKey ssh.PublicK
 	// to display on the screen.
 	pubKeyHash, _ := GetSHA3256Hash(pubKey.Marshal())
 
-	logman.Printf("%s %s key:%s (%s)\n",
+	server.Logger.Printf("%s %s key:%s (%s)\n",
 		ip.String(),
 		username,
 		ByteArrayToHex(pubKeyHash),
@@ -155,7 +156,7 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 
 	if err != nil {
 		log.Println("Error during handshake", err)
-		logman.Println("Error during handshake", err)
+		server.Logger.Println("Error during handshake", err)
 		return false
 	}
 
@@ -188,7 +189,7 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 			}
 		}(requests)
 
-		sessionVFS := *server.pluginManager.PluginVFS
+		sessionVFS := *server.PluginManager.PluginVFS
 		sessionVFS.Username = conn.User()
 
 		sessionTerm := term.NewTerminal(channel, "$ ")
@@ -196,15 +197,15 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 			VFS:      &sessionVFS,
 			Username: conn.User(),
 			Term:     sessionTerm,
-			Manager:  server.pluginManager,
+			Manager:  server.PluginManager,
 		}
 		sessionTerm.AutoCompleteCallback = session.AutoCompleteCallback
 
 		// Change over to the home directory so that the session starts from there.
-		session.Chdir(server.pluginManager.PluginVFS.Home)
+		session.Chdir(server.PluginManager.PluginVFS.Home)
 
 		// Set the initial prompt.
-		sessionTerm.SetPrompt(server.pluginManager.PromptPlugin(session))
+		sessionTerm.SetPrompt(server.PluginManager.PromptPlugin(session))
 
 		go func() {
 			defer channel.Close()
@@ -229,14 +230,14 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 					args.Parse()
 				}
 
-				if commandFn, ok := server.pluginManager.GetCommand(cmd); ok {
+				if commandFn, ok := server.PluginManager.GetCommand(cmd); ok {
 					commandFn(args, session)
 				} else {
 					sessionTerm.Write([]byte(fmt.Sprintf("%s: command not found\n", line)))
 					fmt.Println("->", line)
 				}
 
-				sessionTerm.SetPrompt(server.pluginManager.PromptPlugin(session))
+				sessionTerm.SetPrompt(server.PluginManager.PromptPlugin(session))
 			}
 		}()
 	}
@@ -252,7 +253,7 @@ func (server *SSHServer) ListenLoop() {
 
 		if err != nil {
 			log.Println("Error on accepting connection", err)
-			logman.Println("Error on accepting connection", err)
+			server.Logger.Println("Error on accepting connection", err)
 		}
 
 		// Handle authentication in a goroutine so that the loop is freed up for a possible
