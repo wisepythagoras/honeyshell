@@ -11,10 +11,6 @@ import (
 
 var logman *core.Logman
 
-// https://github.com/karfield/ssh2go/
-// http://api.libssh.org/master/group__libssh__session.html
-// https://github.com/linuxdeepin/go-lib/blob/master/users/passwd/passwd.go
-
 func main() {
 	// Define the command line flags and their default values.
 	username := flag.String("user", "", "Set the permissions to a certain user (ie 'nobody')")
