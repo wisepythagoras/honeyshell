@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const T_DIR = 1
@@ -20,6 +21,8 @@ type VFSFile struct {
 	Contents string             `json:"contents"`
 	Mode     os.FileMode        `json:"mode"`
 	Owner    string             `json:"owner"`
+	Group    string             `json:"group"`
+	ModTime  time.Time          `json:"mod_time"`
 }
 
 func (f *VFSFile) findFile(name string, rest []string) (string, *VFSFile, error) {

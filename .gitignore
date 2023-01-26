@@ -12,6 +12,7 @@
 *.out
 *.log
 honeyshell
+/vfsutil
 honeyshell-c
 honeyshell.log
 honeyshell.db
@@ -24,3 +25,4 @@ id_rsa*
 .vscode/
 plugins/
 vfs.json
+out.json
