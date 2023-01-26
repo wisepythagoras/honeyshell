@@ -8,7 +8,7 @@ A version running [libssh](https://www.libssh.org/) can be found in the [legacy]
 
 ## Building
 
-To compile the program, simply run `go build` in your terminal.
+To compile the program, simply run `make` in your terminal.
 
 ## Running
 
