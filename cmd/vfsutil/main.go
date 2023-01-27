@@ -119,8 +119,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// files, err := os.ReadDir(*path)
-
 	files, err := readDir(*path)
 
 	if err != nil {
@@ -140,11 +138,27 @@ func main() {
 		Home: *home,
 	}
 
+	_, homeFolder, err := vfs.FindFile("/home")
+
+	if err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(3)
+	}
+
+	homeFolder.Files["{}"] = plugin.VFSFile{
+		Type:  plugin.T_DIR,
+		Name:  "{}",
+		Owner: "{}",
+		Group: "{}",
+		Mode:  0775 | os.ModeDir,
+		Files: make(map[string]plugin.VFSFile),
+	}
+
 	j, err := json.Marshal(vfs)
 
 	if err != nil {
 		fmt.Println("JSON Error:", err)
-		os.Exit(3)
+		os.Exit(4)
 	}
 
 	if err = os.WriteFile(*out, j, 0770); err != nil {
