@@ -5,11 +5,11 @@ import (
 )
 
 type Session struct {
-	VFS      *VFS
-	Username string
-	Term     *term.Terminal
-	Manager  *PluginManager
-	pwd      string
+	VFS     *VFS
+	Term    *term.Terminal
+	Manager *PluginManager
+	pwd     string
+	User    *User
 }
 
 func (s *Session) AutoCompleteCallback(line string, pos int, key rune) (newLine string, newPos int, ok bool) {

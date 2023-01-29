@@ -58,7 +58,7 @@ func (pm *PluginManager) LoadPlugins(path string) error {
 }
 
 func (pm *PluginManager) defaultPrompt(s *Session) string {
-	if s.Username == "root" {
+	if s.User.Username == "root" {
 		return "# "
 	}
 

@@ -14,6 +14,12 @@ const T_FILE = 2
 const T_SYMLINK = 3
 const T_ANY = 4
 
+type Perm struct {
+	Read  bool
+	Write bool
+	Exec  bool
+}
+
 type VFSFile struct {
 	Type     int                `json:"type"`
 	Name     string             `json:"name"`
@@ -51,6 +57,46 @@ func (f *VFSFile) findFile(name string, rest []string) (string, *VFSFile, error)
 	return "", nil, fmt.Errorf("file not found")
 }
 
+func (f *VFSFile) resolvePerms(op uint32) Perm {
+	perm := Perm{}
+
+	if op&4 == 4 {
+		perm.Read = true
+	}
+
+	if op&2 == 2 {
+		perm.Write = true
+	}
+
+	if op&1 == 1 {
+		perm.Exec = true
+	}
+
+	return perm
+}
+
+func (f *VFSFile) CanAccess(user *User) Perm {
+	if user == nil {
+		return Perm{}
+	}
+
+	up := uint32(f.Mode / 100)
+	gp := uint32(f.Mode % 100 / 10)
+	op := uint32(f.Mode % 100 % 10)
+
+	perm := Perm{}
+
+	if user.Username == f.Owner {
+		perm = f.resolvePerms(up)
+	} else if user.Username != f.Owner && user.Group == f.Group {
+		perm = f.resolvePerms(gp)
+	} else if user.Username != f.Owner && user.Group != f.Group {
+		perm = f.resolvePerms(op)
+	}
+
+	return perm
+}
+
 func (f *VFSFile) ForEach(callback func(*VFSFile, int)) {
 	if f.Type == T_FILE {
 		callback(f, 0)
@@ -70,10 +116,10 @@ func (f *VFSFile) StrMode() string {
 }
 
 type VFS struct {
-	Root     VFSFile `json:"root"`
-	Home     string  `json:"home"`
-	PWD      string  `json:"-"`
-	Username string  `json:"-"`
+	Root VFSFile `json:"root"`
+	Home string  `json:"home"`
+	PWD  string  `json:"-"`
+	User *User   `json:"-"`
 }
 
 func (vfs *VFS) resolveDotPath(path string) string {
@@ -107,8 +153,8 @@ func (vfs *VFS) FindFile(path string) (string, *VFSFile, error) {
 
 	if path == "/" {
 		return "/", &vfs.Root, nil
-	} else if strings.HasPrefix(path, "/home/"+vfs.Username) {
-		path = strings.Replace(path, "/home/"+vfs.Username, "/home/{}", 1)
+	} else if strings.HasPrefix(path, "/home/"+vfs.User.Username) {
+		path = strings.Replace(path, "/home/"+vfs.User.Username, "/home/{}", 1)
 	}
 
 	parts := strings.Split(path, "/")

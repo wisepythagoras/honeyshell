@@ -189,15 +189,20 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 			}
 		}(requests)
 
+		user := &plugin.User{
+			Username: conn.User(),
+			Group:    conn.User(),
+		}
+
 		sessionVFS := *server.PluginManager.PluginVFS
-		sessionVFS.Username = conn.User()
+		sessionVFS.User = user
 
 		sessionTerm := term.NewTerminal(channel, "$ ")
 		session := &plugin.Session{
-			VFS:      &sessionVFS,
-			Username: conn.User(),
-			Term:     sessionTerm,
-			Manager:  server.PluginManager,
+			VFS:     &sessionVFS,
+			Term:    sessionTerm,
+			Manager: server.PluginManager,
+			User:    user,
 		}
 		sessionTerm.AutoCompleteCallback = session.AutoCompleteCallback
 

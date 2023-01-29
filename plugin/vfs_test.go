@@ -12,7 +12,10 @@ const testVfs = "{\"root\":{\"type\":1,\"name\":\"\",\"files\":{\"home\":{\"type
 func TestPathResolution(t *testing.T) {
 	vfs := &plugin.VFS{}
 	err := json.Unmarshal([]byte(testVfs), vfs)
-	vfs.Username = "{}"
+	vfs.User = &plugin.User{
+		Username: "{}",
+		Group:    "{}",
+	}
 
 	if err != nil {
 		t.Errorf("Error: %s", err)
@@ -54,15 +57,21 @@ func TestPathResolution(t *testing.T) {
 func TestChdir(t *testing.T) {
 	vfs := &plugin.VFS{}
 	err := json.Unmarshal([]byte(testVfs), vfs)
-	vfs.Username = "{}"
+	vfs.User = &plugin.User{
+		Username: "{}",
+		Group:    "{}",
+	}
 
 	if err != nil {
 		t.Errorf("Error: %s", err)
 	}
 
 	session := plugin.Session{
-		VFS:      vfs,
-		Username: "test",
+		VFS: vfs,
+		User: &plugin.User{
+			Username: "test",
+			Group:    "test",
+		},
 	}
 	session.Chdir(vfs.Home)
 
