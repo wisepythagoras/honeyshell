@@ -57,41 +57,49 @@ func (f *VFSFile) findFile(name string, rest []string) (string, *VFSFile, error)
 	return "", nil, fmt.Errorf("file not found")
 }
 
-func (f *VFSFile) resolvePerms(op uint32) Perm {
-	perm := Perm{}
-
-	if op&4 == 4 {
-		perm.Read = true
-	}
-
-	if op&2 == 2 {
-		perm.Write = true
-	}
-
-	if op&1 == 1 {
-		perm.Exec = true
-	}
-
-	return perm
-}
-
 func (f *VFSFile) CanAccess(user *User) Perm {
-	if user == nil {
-		return Perm{}
+	var buf [32]bool
+	w := 0
+
+	// 13, one for each of "dalTLDpSugct?"
+	for i := 0; i < 13; i++ {
+		if f.Mode&(1<<uint(32-1-i)) != 0 {
+			buf[w] = true
+			w++
+		}
 	}
 
-	up := uint32(f.Mode / 100)
-	gp := uint32(f.Mode % 100 / 10)
-	op := uint32(f.Mode % 100 % 10)
+	if w == 0 {
+		buf[w] = false
+		w++
+	}
 
+	// 9, one for each of "rwxrwxrwx"
+	for i := 0; i < 9; i++ {
+		if f.Mode&(1<<uint(9-1-i)) != 0 {
+			buf[w] = true
+		} else {
+			buf[w] = false
+		}
+
+		w++
+	}
+
+	rawPerms := buf[:w]
 	perm := Perm{}
 
 	if user.Username == f.Owner {
-		perm = f.resolvePerms(up)
+		perm.Read = rawPerms[1]
+		perm.Write = rawPerms[2]
+		perm.Exec = rawPerms[3]
 	} else if user.Username != f.Owner && user.Group == f.Group {
-		perm = f.resolvePerms(gp)
+		perm.Read = rawPerms[4]
+		perm.Write = rawPerms[5]
+		perm.Exec = rawPerms[6]
 	} else if user.Username != f.Owner && user.Group != f.Group {
-		perm = f.resolvePerms(op)
+		perm.Read = rawPerms[7]
+		perm.Write = rawPerms[8]
+		perm.Exec = rawPerms[9]
 	}
 
 	return perm
