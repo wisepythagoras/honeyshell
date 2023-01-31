@@ -170,6 +170,57 @@ func (vfs *VFS) FindFile(path string) (string, *VFSFile, error) {
 	return vfs.Root.findFile(parts[0], parts[1:])
 }
 
+func (vfs *VFS) Mkdir(path string, mode os.FileMode, user *User) (*VFSFile, error) {
+	_, file, err := vfs.FindFile(filepath.Dir(path))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if file.Type != T_DIR {
+		return nil, fmt.Errorf("cannot create directory ‘%s‘: No such file or directory", path)
+	}
+
+	realUser := *user
+
+	if vfs.User.Username == realUser.Username {
+		realUser = User{
+			Username: "{}",
+			Group:    "{}",
+		}
+	}
+
+	perms := file.CanAccess(&realUser)
+
+	if !perms.Write {
+		return nil, fmt.Errorf("cannot create directory ‘%s‘: Permission denied", path)
+	}
+
+	base := filepath.Base(path)
+
+	if _, ok := file.Files[base]; ok {
+		return nil, fmt.Errorf("file %q already exists", path)
+	}
+
+	if mode == 0 {
+		mode = 0775
+	}
+
+	newFile := VFSFile{
+		Name:    base,
+		Type:    T_DIR,
+		Mode:    mode | os.ModeDir,
+		Files:   make(map[string]VFSFile),
+		Owner:   "{}",
+		Group:   "{}",
+		ModTime: time.Now(),
+	}
+
+	file.Files[base] = newFile
+
+	return &newFile, nil
+}
+
 // ReadVFSJSONFile reads the JSON file which contains the the virtual file system model.
 func ReadVFSJSONFile(path string) (*VFS, error) {
 	data, err := os.ReadFile(path)
