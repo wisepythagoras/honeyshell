@@ -170,7 +170,7 @@ func (vfs *VFS) FindFile(path string) (string, *VFSFile, error) {
 	return vfs.Root.findFile(parts[0], parts[1:])
 }
 
-func (vfs *VFS) Mkdir(path string, mode os.FileMode, user *User) (*VFSFile, error) {
+func (vfs *VFS) Mkdir(path string, mode os.FileMode) (*VFSFile, error) {
 	_, file, err := vfs.FindFile(filepath.Dir(path))
 
 	if err != nil {
@@ -181,7 +181,7 @@ func (vfs *VFS) Mkdir(path string, mode os.FileMode, user *User) (*VFSFile, erro
 		return nil, fmt.Errorf("cannot create directory ‘%s‘: No such file or directory", path)
 	}
 
-	realUser := *user
+	realUser := *vfs.User
 
 	if vfs.User.Username == realUser.Username {
 		realUser = User{
@@ -219,6 +219,42 @@ func (vfs *VFS) Mkdir(path string, mode os.FileMode, user *User) (*VFSFile, erro
 	file.Files[base] = newFile
 
 	return &newFile, nil
+}
+
+func (vfs *VFS) Rmdir(path string) error {
+	_, parentFolder, err := vfs.FindFile(filepath.Dir(path))
+
+	if err != nil {
+		return err
+	}
+
+	realUser := *vfs.User
+
+	if vfs.User.Username == realUser.Username {
+		realUser = User{
+			Username: "{}",
+			Group:    "{}",
+		}
+	}
+
+	var file VFSFile
+	var ok bool
+
+	base := filepath.Base(path)
+
+	if file, ok = parentFolder.Files[base]; !ok {
+		return fmt.Errorf("no such file or directory")
+	}
+
+	perms := file.CanAccess(&realUser)
+
+	if !perms.Write {
+		return fmt.Errorf("permission denied")
+	}
+
+	delete(parentFolder.Files, base)
+
+	return nil
 }
 
 // ReadVFSJSONFile reads the JSON file which contains the the virtual file system model.
