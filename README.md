@@ -17,15 +17,19 @@ The default port is 22 and no user is mandatory, but the `-key` is, so make sure
 ```
 Usage of ./honeyshell:
   -banner string
-    	The banner for the SSH server (default "OpenSSH_7.4p1 Raspbian-10+deb9u3")
+        The banner for the SSH server (default "SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u3")
   -key string
-    	The RSA key to use
+        The RSA key to use
+  -plugins string
+        The path to the folder containing the plugins
   -port int
-    	The port the deamon should run on (default 22)
+        The port the deamon should run on (default 22)
   -user string
-    	Set the permissions to a certain user (ie 'nobody')
+        Set the permissions to a certain user (ie 'nobody')
   -verbose
-      Print out debug messages
+        Print out debug messages
+  -vfs string
+        The path to the VFS (virtual file system) JSON file
 ```
 
 Example usage:
