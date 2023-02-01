@@ -221,7 +221,7 @@ func (vfs *VFS) Mkdir(path string, mode os.FileMode) (*VFSFile, error) {
 	return &newFile, nil
 }
 
-func (vfs *VFS) Rmdir(path string) error {
+func (vfs *VFS) Rmfile(path string) error {
 	_, parentFolder, err := vfs.FindFile(filepath.Dir(path))
 
 	if err != nil {
@@ -253,6 +253,57 @@ func (vfs *VFS) Rmdir(path string) error {
 	}
 
 	delete(parentFolder.Files, base)
+
+	return nil
+}
+
+func (vfs *VFS) WriteFile(path, contents string) error {
+	_, parentFolder, err := vfs.FindFile(filepath.Dir(path))
+
+	if err != nil {
+		return err
+	}
+
+	realUser := *vfs.User
+
+	if vfs.User.Username == realUser.Username {
+		realUser = User{
+			Username: "{}",
+			Group:    "{}",
+		}
+	}
+
+	base := filepath.Base(path)
+	perms := parentFolder.CanAccess(&realUser)
+
+	if !perms.Write {
+		return fmt.Errorf("permission denied")
+	}
+
+	file, ok := parentFolder.Files[base]
+
+	if ok && file.Type == T_DIR {
+		return fmt.Errorf("file is a directory")
+	} else if ok && !file.CanAccess(&realUser).Write {
+		return fmt.Errorf("permission denied")
+	}
+
+	// TODO: Implement all modes, read, write, append.
+	if ok {
+		file.Contents = contents
+	} else {
+		file = VFSFile{
+			Type:     T_FILE,
+			Mode:     0664,
+			Name:     base,
+			Contents: contents,
+			Owner:    "{}",
+			Group:    "{}",
+			ModTime:  time.Now(),
+		}
+	}
+
+	parentFolder.Files[base] = file
 
 	return nil
 }
