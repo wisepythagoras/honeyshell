@@ -1,6 +1,6 @@
 # Honeyshell
 
-An SSH honeypot written entirely in Go, using `crypto/ssh` as its base.
+An extensible SSH honeypot written entirely in Go, using `crypto/ssh` as its base.
 
 Currently, it allows connections on the server and collects failed login attempts, meaning all usernames and passwords. Also, you can decrease the permissions on the process by flipping to a different user (ie 'nobody').
 
