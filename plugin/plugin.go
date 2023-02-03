@@ -61,7 +61,7 @@ func (p *Plugin) Init() error {
 		return fmt.Errorf("the install function wasn't found")
 	}
 
-	p.Config = &Config{}
+	p.Config = &Config{vfs: p.vfs}
 	p.Config.Init()
 
 	err := p.L.CallByParam(lua.P{

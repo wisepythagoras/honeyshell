@@ -2,7 +2,9 @@ package plugin
 
 import (
 	"log"
+	"math/rand"
 	"net"
+	"time"
 )
 
 type TermWriteFn func(...string)
@@ -15,14 +17,14 @@ type Config struct {
 	CommandCallbacks    map[string]CommandFn
 	PasswordInterceptor PasswordInterceptFn
 	PromptFn            PromptFn
+	vfs                 *VFS
 }
 
 func (c *Config) Init() {
 	c.CommandCallbacks = make(map[string]CommandFn)
-
 }
 
-func (c *Config) RegisterCommand(cmd string, cmdFn CommandFn) bool {
+func (c *Config) RegisterCommand(cmd, dir string, cmdFn CommandFn) bool {
 	if cmdFn == nil {
 		log.Println("No command function for command", cmd)
 		return false
@@ -30,6 +32,30 @@ func (c *Config) RegisterCommand(cmd string, cmdFn CommandFn) bool {
 
 	log.Println("Registering command", cmd)
 	c.CommandCallbacks[cmd] = cmdFn
+
+	if c.vfs != nil {
+		_, file, err := c.vfs.FindFile(dir)
+
+		if err != nil {
+			log.Println("Error:", err)
+			return false
+		}
+
+		if _, ok := file.Files[cmd]; ok {
+			log.Printf("Error: command \"%s%s\" already exists\n", dir, cmd)
+			return false
+		}
+
+		file.Files[cmd] = VFSFile{
+			Type:    T_FILE,
+			Mode:    0755,
+			Name:    cmd,
+			CmdFn:   cmdFn,
+			Owner:   "root",
+			Group:   "root",
+			ModTime: time.Now().Add(time.Duration(-rand.Intn(30)) * time.Hour),
+		}
+	}
 
 	return true
 }

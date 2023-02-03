@@ -29,6 +29,7 @@ type VFSFile struct {
 	Owner    string             `json:"owner"`
 	Group    string             `json:"group"`
 	ModTime  time.Time          `json:"mod_time"`
+	CmdFn    CommandFn          `json:"-"`
 }
 
 func (f *VFSFile) findFile(name string, rest []string) (string, *VFSFile, error) {
