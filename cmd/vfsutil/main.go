@@ -57,6 +57,7 @@ func readDir(path, basePath string) (map[string]plugin.VFSFile, error) {
 			Owner:   usr.Username,
 			ModTime: info.ModTime(),
 			Group:   group.Name,
+			NLink:   int(stat.Nlink),
 		}
 
 		newFilePath := filepath.Join(path, f.Name())

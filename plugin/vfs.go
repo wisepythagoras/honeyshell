@@ -30,6 +30,7 @@ type VFSFile struct {
 	Group    string             `json:"g"`
 	ModTime  time.Time          `json:"mt"`
 	LinkTo   string             `json:"lt"`
+	NLink    int                `json:"nl"`
 	CmdFn    CommandFn          `json:"-"`
 }
 
