@@ -21,14 +21,15 @@ type Perm struct {
 }
 
 type VFSFile struct {
-	Type     int                `json:"type"`
-	Name     string             `json:"name"`
-	Files    map[string]VFSFile `json:"files"`
-	Contents string             `json:"contents"`
-	Mode     os.FileMode        `json:"mode"`
-	Owner    string             `json:"owner"`
-	Group    string             `json:"group"`
-	ModTime  time.Time          `json:"mod_time"`
+	Type     int                `json:"t"`
+	Name     string             `json:"n"`
+	Files    map[string]VFSFile `json:"f"`
+	Contents string             `json:"c"`
+	Mode     os.FileMode        `json:"m"`
+	Owner    string             `json:"o"`
+	Group    string             `json:"g"`
+	ModTime  time.Time          `json:"mt"`
+	LinkTo   string             `json:"lt"`
 	CmdFn    CommandFn          `json:"-"`
 }
 

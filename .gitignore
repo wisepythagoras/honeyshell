@@ -26,3 +26,5 @@ id_rsa*
 plugins/
 vfs.json
 out.json
+/cmd/tests
+/tests

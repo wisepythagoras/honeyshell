@@ -15,7 +15,7 @@ import (
 	"github.com/wisepythagoras/honeyshell/plugin"
 )
 
-func readDir(path string) (map[string]plugin.VFSFile, error) {
+func readDir(path, basePath string) (map[string]plugin.VFSFile, error) {
 	files, err := os.ReadDir(path)
 
 	if err != nil {
@@ -53,12 +53,18 @@ func readDir(path string) (map[string]plugin.VFSFile, error) {
 		fmt.Println(filepath.Join(path, f.Name()), usr.Username, group.Name, f.IsDir())
 
 		vfsFile := plugin.VFSFile{
-			Type:    plugin.T_FILE,
 			Name:    f.Name(),
 			Owner:   usr.Username,
 			ModTime: info.ModTime(),
 			Group:   group.Name,
 		}
+
+		newFilePath := filepath.Join(path, f.Name())
+		shouldInclude := !strings.HasSuffix(newFilePath, "/bin") &&
+			!strings.HasSuffix(newFilePath, "/lib") &&
+			!strings.HasSuffix(newFilePath, "/lib64") &&
+			!strings.HasSuffix(newFilePath, "/dev") &&
+			!strings.HasSuffix(newFilePath, "/sys")
 
 		if !f.IsDir() && (info.Mode()&os.ModeSymlink == 0) {
 			buff, err := os.ReadFile(filepath.Join(path, f.Name()))
@@ -71,24 +77,21 @@ func readDir(path string) (map[string]plugin.VFSFile, error) {
 			vfsFile.Contents = string(buff)
 			vfsFile.Mode = fs.FileMode(stat.Mode)
 		} else if info.Mode()&os.ModeSymlink != 0 {
-			// TODO
-		} else {
-			newFilePath := filepath.Join(path, f.Name())
+			flPath, err := os.Readlink(newFilePath)
+			flPath = strings.Replace(flPath, basePath, "", 1)
+			fmt.Println(newFilePath, "->", flPath, err)
 
-			if !strings.HasSuffix(newFilePath, "/bin") &&
-				!strings.HasSuffix(newFilePath, "/lib") &&
-				!strings.HasSuffix(newFilePath, "/lib64") &&
-				!strings.HasSuffix(newFilePath, "/dev") &&
-				!strings.HasSuffix(newFilePath, "/sys") {
-				vfsFiles, err := traverseDir(f, newFilePath)
+			vfsFile.Type = plugin.T_SYMLINK
+			vfsFile.Mode = fs.FileMode(stat.Mode) | os.ModeSymlink
+			vfsFile.LinkTo = flPath
+		} else if shouldInclude {
+			vfsFiles, err := traverseDir(f, newFilePath, basePath)
 
-				if err != nil {
-					return nil, err
-				}
-
-				vfsFile.Files = vfsFiles
+			if err != nil {
+				return nil, err
 			}
 
+			vfsFile.Files = vfsFiles
 			vfsFile.Type = plugin.T_DIR
 			vfsFile.Mode = fs.FileMode(stat.Mode) | os.ModeDir
 		}
@@ -99,12 +102,12 @@ func readDir(path string) (map[string]plugin.VFSFile, error) {
 	return vfsMap, nil
 }
 
-func traverseDir(file os.DirEntry, path string) (map[string]plugin.VFSFile, error) {
+func traverseDir(file os.DirEntry, path, basePath string) (map[string]plugin.VFSFile, error) {
 	if !file.IsDir() {
 		return nil, fmt.Errorf("%q not a directory", path)
 	}
 
-	return readDir(path)
+	return readDir(path, basePath)
 }
 
 func main() {
@@ -119,7 +122,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	files, err := readDir(*path)
+	files, err := readDir(*path, *path)
 
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -129,13 +132,17 @@ func main() {
 	vfsRoot := plugin.VFSFile{
 		Type:  plugin.T_DIR,
 		Name:  "",
-		Mode:  0700,
+		Mode:  0755,
 		Owner: "root",
 		Files: files,
 	}
 	vfs := plugin.VFS{
 		Root: vfsRoot,
 		Home: *home,
+		User: &plugin.User{
+			Username: "{}",
+			Group:    "{}",
+		},
 	}
 
 	_, homeFolder, err := vfs.FindFile("/home")
