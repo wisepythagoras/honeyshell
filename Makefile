@@ -1,4 +1,4 @@
-.PHONY: all honeyshell vfsutil
+.PHONY: all honeyshell vfsutil tests
 
 all: honeyshell vfsutil
 
@@ -9,3 +9,8 @@ honeyshell:
 vfsutil:
 	$(shell cd cmd/vfsutil; go build .)
 	mv cmd/vfsutil/vfsutil .
+
+# This is meant for experiments which are not committed to the repo
+tests:
+	$(shell cd cmd/tests; go build .)
+	mv cmd/tests/tests .
