@@ -14,6 +14,7 @@ type PluginManager struct {
 	passwordPlugins []*Plugin
 	commandMap      map[string]CommandFn
 	PromptPlugin    PromptFn
+	LoginMessageFn  LoginMessageFn
 }
 
 func (pm *PluginManager) LoadPlugins(path string) error {
@@ -47,6 +48,10 @@ func (pm *PluginManager) LoadPlugins(path string) error {
 
 		if pl.HasPromptFn() {
 			pm.PromptPlugin = pl.Config.PromptFn
+		}
+
+		if pl.HasLoginMessage() {
+			pm.LoginMessageFn = pl.Config.LoginMessageFn
 		}
 	}
 

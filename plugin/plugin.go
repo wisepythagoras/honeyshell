@@ -89,6 +89,10 @@ func (p *Plugin) HasCommandDefined() bool {
 	return len(p.Config.CommandCallbacks) > 0
 }
 
+func (p *Plugin) HasLoginMessage() bool {
+	return p.Config.LoginMessageFn != nil
+}
+
 func (p *Plugin) HasPromptFn() bool {
 	return p.Config.PromptFn != nil
 }

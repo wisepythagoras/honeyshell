@@ -209,6 +209,11 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 		// Change over to the home directory so that the session starts from there.
 		session.Chdir(server.PluginManager.PluginVFS.Home)
 
+		if server.PluginManager.LoginMessageFn != nil {
+			loginMessage := server.PluginManager.LoginMessageFn(session)
+			session.TermWrite(loginMessage)
+		}
+
 		// Set the initial prompt.
 		sessionTerm.SetPrompt(server.PluginManager.PromptPlugin(session))
 
