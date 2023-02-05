@@ -27,6 +27,7 @@ func StringsModule(L *lua.LState) *lua.LTable {
 	L.SetField(module, "Split", luar.New(L, strings.Split))
 	L.SetField(module, "SplitAfter", luar.New(L, strings.SplitAfter))
 	L.SetField(module, "ToUpper", luar.New(L, strings.ToUpper))
+	L.SetField(module, "Trim", luar.New(L, strings.Trim))
 
 	return module
 }
