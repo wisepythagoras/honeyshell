@@ -28,13 +28,11 @@ func (pm *PluginManager) LoadPlugins(path string) error {
 	}
 
 	for _, pl := range pm.plugins {
-		err = pl.Init()
+		err = pl.Init(pm.PluginVFS)
 
 		if err != nil {
 			return err
 		}
-
-		pl.SetVFS(pm.PluginVFS)
 
 		if pl.HasPasswordIntercept() {
 			pm.passwordPlugins = append(pm.passwordPlugins, pl)

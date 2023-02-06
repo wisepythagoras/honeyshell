@@ -4,6 +4,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"path/filepath"
 	"time"
 )
 
@@ -41,6 +42,15 @@ func (c *Config) RegisterCommand(cmd, dir string, cmdFn CommandFn) bool {
 		if err != nil {
 			log.Println("Error:", err)
 			return false
+		}
+
+		if file.Type == T_SYMLINK {
+			_, file, err = c.vfs.FindFile(filepath.Join("/", file.LinkTo))
+
+			if err != nil {
+				log.Println("Error:", err)
+				return false
+			}
 		}
 
 		if _, ok := file.Files[cmd]; ok {

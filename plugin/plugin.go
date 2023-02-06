@@ -32,8 +32,10 @@ func (p *Plugin) GetPath(withMain bool) string {
 	return pluginPath
 }
 
-func (p *Plugin) Init() error {
+func (p *Plugin) Init(vfs *VFS) error {
 	p.L = lua.NewState()
+
+	p.vfs = vfs
 
 	// Set up the environment here.
 	nativeMod := nativeModule{L: p.L}

@@ -85,11 +85,15 @@ func readDir(path, basePath string) (map[string]plugin.VFSFile, error) {
 			vfsFile.Type = plugin.T_SYMLINK
 			vfsFile.Mode = fs.FileMode(stat.Mode) | os.ModeSymlink
 			vfsFile.LinkTo = flPath
-		} else if shouldInclude {
-			vfsFiles, err := traverseDir(f, newFilePath, basePath)
+		} else {
+			vfsFiles := make(map[string]plugin.VFSFile)
 
-			if err != nil {
-				return nil, err
+			if shouldInclude {
+				vfsFiles, err = traverseDir(f, newFilePath, basePath)
+
+				if err != nil {
+					return nil, err
+				}
 			}
 
 			vfsFile.Files = vfsFiles
