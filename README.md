@@ -52,3 +52,15 @@ The output should look something like this:
 2022/12/27 11:30:20 127.0.0.1:54478 test pass:admin
 2022/12/27 11:30:26 127.0.0.1:54478 test pass:password123
 ```
+
+## Plugins
+
+Honeyshell has a Lua-based plugin engine which enables you to do whatever you want with the information that's received. For example, You can:
+
+1. Send all username and password pairs to a webhook.
+2. Aggregate the IPs that attempt to connect by country and time,
+3. Build an entire Bash emulation shell.
+
+Plans are being drafted on using WebAssembly in the future, but I won't get started soon as there are things that are misisng that will be needed.
+
+An example plugin can be found in [this repository](https://github.com/wisepythagoras/system-example-plugin).
