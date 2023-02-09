@@ -45,6 +45,8 @@ func (p *Plugin) Init(vfs *VFS) error {
 	p.L.SetGlobal("dirname", luar.New(p.L, p.GetPath(false)))
 	p.L.SetGlobal("toBytes", luar.New(p.L, stringToBytes))
 	p.L.SetGlobal("toString", luar.New(p.L, bytesToString))
+	p.L.SetGlobal("newMap", luar.New(p.L, newMap))
+	p.L.SetGlobal("newBoolMap", luar.New(p.L, newBoolMap))
 
 	// Allow requiring lua files from the plugin's directory.
 	pkg := p.L.GetGlobal("package")

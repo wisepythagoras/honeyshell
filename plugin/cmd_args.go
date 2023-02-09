@@ -1,13 +1,49 @@
 package plugin
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 )
 
+type OptConfig map[string]bool
+
 type CmdArgs struct {
 	RawArgs string
 	argMap  map[string]any
+}
+
+func (args *CmdArgs) ParseOpts(optsConfig OptConfig) (map[string]any, []string, error) {
+	parts := strings.Split(args.RawArgs, " ")
+	bareArgs := make([]string, 0)
+	opts := make(map[string]any)
+	bypassNext := false
+
+	for i, part := range parts {
+		if part == "" || bypassNext {
+			bypassNext = false
+			continue
+		}
+
+		if hasArg, ok := optsConfig[part]; ok {
+			// Check for arguments.
+			if !hasArg {
+				opts[strings.ReplaceAll(part, "-", "")] = true
+			} else {
+				if i >= len(parts)-1 || parts[i+1][0] == '-' {
+					noValFound := fmt.Errorf("Argument %q requires a value, but none was found", part)
+					return opts, bareArgs, noValFound
+				}
+
+				opts[strings.ReplaceAll(part, "-", "")] = parts[i+1]
+				bypassNext = true
+			}
+		} else {
+			bareArgs = append(bareArgs, part)
+		}
+	}
+
+	return opts, bareArgs, nil
 }
 
 func (args *CmdArgs) Parse() {

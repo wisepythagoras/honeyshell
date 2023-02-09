@@ -63,3 +63,11 @@ func stringToBytes(str string) []byte {
 func bytesToString(b []byte) string {
 	return string(b)
 }
+
+func newMap() map[string]any {
+	return make(map[string]any)
+}
+
+func newBoolMap() map[string]bool {
+	return make(map[string]bool)
+}
