@@ -4,20 +4,51 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	lua "github.com/yuin/gopher-lua"
+	luar "layeh.com/gopher-luar"
 )
 
-type OptConfig map[string]bool
+type OptConfig struct {
+	Opts       map[string]bool
+	ParsedOpts map[string]any
+	BareArgs   []string
+}
+
+func (o *OptConfig) AddOne(arg string, hasArg bool) {
+	o.Opts[arg] = hasArg
+}
+
+func (o *OptConfig) AddBoth(short, long string, hasArg bool) {
+	o.Opts[short] = hasArg
+	o.Opts[long] = hasArg
+}
+
+func (o *OptConfig) Get(arg string) any {
+	if o.ParsedOpts == nil {
+		return nil
+	}
+
+	if val, ok := o.ParsedOpts[arg]; ok {
+		return val
+	}
+
+	return nil
+}
 
 type CmdArgs struct {
 	RawArgs string
 	argMap  map[string]any
 }
 
-func (args *CmdArgs) ParseOpts(optsConfig OptConfig) (map[string]any, []string, error) {
+func (args *CmdArgs) ParseOpts(optsConfig *OptConfig) (map[string]any, []string, error) {
 	parts := strings.Split(args.RawArgs, " ")
 	bareArgs := make([]string, 0)
 	opts := make(map[string]any)
 	bypassNext := false
+
+	optsConfig.ParsedOpts = opts
+	optsConfig.BareArgs = bareArgs
 
 	for i, part := range parts {
 		if part == "" || bypassNext {
@@ -25,25 +56,25 @@ func (args *CmdArgs) ParseOpts(optsConfig OptConfig) (map[string]any, []string, 
 			continue
 		}
 
-		if hasArg, ok := optsConfig[part]; ok {
+		if hasArg, ok := optsConfig.Opts[part]; ok {
 			// Check for arguments.
 			if !hasArg {
-				opts[strings.ReplaceAll(part, "-", "")] = true
+				optsConfig.ParsedOpts[strings.ReplaceAll(part, "-", "")] = true
 			} else {
 				if i >= len(parts)-1 || parts[i+1][0] == '-' {
 					noValFound := fmt.Errorf("Argument %q requires a value, but none was found", part)
-					return opts, bareArgs, noValFound
+					return optsConfig.ParsedOpts, optsConfig.BareArgs, noValFound
 				}
 
-				opts[strings.ReplaceAll(part, "-", "")] = parts[i+1]
+				optsConfig.ParsedOpts[strings.ReplaceAll(part, "-", "")] = parts[i+1]
 				bypassNext = true
 			}
 		} else {
-			bareArgs = append(bareArgs, part)
+			optsConfig.BareArgs = append(optsConfig.BareArgs, part)
 		}
 	}
 
-	return opts, bareArgs, nil
+	return optsConfig.ParsedOpts, optsConfig.BareArgs, nil
 }
 
 func (args *CmdArgs) Parse() {
@@ -106,4 +137,18 @@ func (args *CmdArgs) ForEach(callback func(string, any)) {
 	for k, v := range args.argMap {
 		callback(k, v)
 	}
+}
+
+func CreateOptsConfig() *OptConfig {
+	return &OptConfig{
+		Opts: make(map[string]bool),
+	}
+}
+
+func OptsModule(L *lua.LState) *lua.LTable {
+	module := L.NewTable()
+
+	L.SetField(module, "CreateOptsConfig", luar.New(L, CreateOptsConfig))
+
+	return module
 }
