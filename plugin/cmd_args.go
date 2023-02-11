@@ -41,7 +41,7 @@ type CmdArgs struct {
 	argMap  map[string]any
 }
 
-func (args *CmdArgs) ParseOpts(optsConfig *OptConfig) (map[string]any, []string, error) {
+func (args *CmdArgs) ParseOpts(optsConfig *OptConfig, multiCharSingleDash bool) (map[string]any, []string, error) {
 	parts := strings.Split(args.RawArgs, " ")
 	bareArgs := make([]string, 0)
 	opts := make(map[string]any)
@@ -56,21 +56,35 @@ func (args *CmdArgs) ParseOpts(optsConfig *OptConfig) (map[string]any, []string,
 			continue
 		}
 
-		if hasArg, ok := optsConfig.Opts[part]; ok {
-			// Check for arguments.
-			if !hasArg {
-				optsConfig.ParsedOpts[strings.ReplaceAll(part, "-", "")] = true
-			} else {
-				if i >= len(parts)-1 || parts[i+1][0] == '-' {
-					noValFound := fmt.Errorf("Argument %q requires a value, but none was found", part)
-					return optsConfig.ParsedOpts, optsConfig.BareArgs, noValFound
-				}
+		args := make([]string, 0)
 
-				optsConfig.ParsedOpts[strings.ReplaceAll(part, "-", "")] = parts[i+1]
-				bypassNext = true
-			}
+		if !multiCharSingleDash || strings.HasPrefix(part, "--") {
+			args = append(args, part)
 		} else {
-			optsConfig.BareArgs = append(optsConfig.BareArgs, part)
+			temp := strings.Split(strings.Replace(part, "-", "", 1), "")
+
+			for _, arg := range temp {
+				args = append(args, "-"+arg)
+			}
+		}
+
+		for _, arg := range args {
+			if hasArg, ok := optsConfig.Opts[arg]; ok {
+				// Check for arguments.
+				if !hasArg {
+					optsConfig.ParsedOpts[strings.ReplaceAll(arg, "-", "")] = true
+				} else {
+					if i >= len(parts)-1 || parts[i+1][0] == '-' {
+						noValFound := fmt.Errorf("Argument %q requires a value, but none was found", part)
+						return optsConfig.ParsedOpts, optsConfig.BareArgs, noValFound
+					}
+
+					optsConfig.ParsedOpts[strings.ReplaceAll(part, "-", "")] = parts[i+1]
+					bypassNext = true
+				}
+			} else {
+				optsConfig.BareArgs = append(optsConfig.BareArgs, part)
+			}
 		}
 	}
 
