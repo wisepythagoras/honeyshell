@@ -71,3 +71,38 @@ func newMap() map[string]any {
 func newBoolMap() map[string]bool {
 	return make(map[string]bool)
 }
+
+func arrayLen(arr any) int {
+	switch x := arr.(type) {
+	case []string:
+		return len(x)
+	case []int:
+		return len(x)
+	case []int8:
+		return len(x)
+	case []int16:
+		return len(x)
+	case []int32:
+		return len(x)
+	case []int64:
+		return len(x)
+	case []uint:
+		return len(x)
+	case []uint8:
+		return len(x)
+	case []uint16:
+		return len(x)
+	case []uint32:
+		return len(x)
+	case []uint64:
+		return len(x)
+	case []float32:
+		return len(x)
+	case []float64:
+		return len(x)
+	case []any:
+		return len(x)
+	}
+
+	return 0
+}
