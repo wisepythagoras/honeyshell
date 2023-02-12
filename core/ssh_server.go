@@ -249,7 +249,19 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 				if commandFn, ok := server.PluginManager.GetCommand(cmd); ok {
 					commandFn(args, session)
 				} else {
-					sessionTerm.Write([]byte(fmt.Sprintf("%s: command not found\n", line)))
+					out := ""
+
+					if strings.HasPrefix(cmd, "/") {
+						// TODO: In this case we want to handle what happens if a directory is found:
+						//     bash: /dir/here: Is a directory
+						// Or if a file is not executable:
+						//     bash: ./path/to/file: Permission denied
+						out = fmt.Sprintf("%s: No such file or directory\n", line)
+					} else {
+						out = fmt.Sprintf("%s: command not found\n", line)
+					}
+
+					sessionTerm.Write([]byte(out))
 					fmt.Println("->", line)
 				}
 
