@@ -67,6 +67,7 @@ func (c *Config) RegisterCommand(cmd, dir string, cmdFn CommandFn) bool {
 			Group:   "root",
 			ModTime: time.Now().Add(time.Duration(-rand.Intn(30)) * time.Hour),
 		}
+		c.CommandCallbacks[filepath.Join(dir, cmd)] = cmdFn
 	}
 
 	return true

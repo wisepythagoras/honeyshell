@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/wisepythagoras/honeyshell/plugin"
@@ -234,6 +235,11 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 				parts := strings.SplitN(line, " ", 2)
 				cmd := parts[0]
 				args := &plugin.CmdArgs{}
+
+				if strings.HasPrefix(cmd, ".") {
+					pwd := session.GetPWD()
+					cmd = filepath.Join(pwd, cmd)
+				}
 
 				if len(parts) > 1 {
 					args.RawArgs = parts[1]
