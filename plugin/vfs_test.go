@@ -7,7 +7,7 @@ import (
 	"github.com/wisepythagoras/honeyshell/plugin"
 )
 
-const testVfs = "{\"root\":{\"type\":1,\"name\":\"\",\"files\":{\"home\":{\"type\":1,\"name\":\"home\",\"files\":{\"{}\":{\"type\":1,\"name\":\"{}\",\"files\":{\"test.txt\":{\"type\":2,\"name\":\"test.txt\",\"owner\":\"{}\",\"contents\":\"This is a test file\",\"mode\":432}},\"owner\":\"{}\",\"mode\":2147484157}},\"owner\":\"root\",\"mode\":2147484141},\"etc\":{\"type\":1,\"name\":\"etc\",\"files\":{\"hostname\":{\"type\":2,\"name\":\"hostname\",\"owner\":\"root\",\"contents\":\"test-hostname\",\"mode\":420},\"issue\":{\"type\":2,\"name\":\"issue\",\"owner\":\"root\",\"contents\":\"Ubuntu 22.04\",\"mode\":420}},\"owner\":\"root\",\"mode\":2147484141}},\"owner\":\"root\",\"mode\":2147484141},\"home\":\"/home/{}\"}"
+const testVfs = "{\"root\":{\"t\":1,\"n\":\"\",\"f\":{\"home\":{\"t\":1,\"n\":\"home\",\"f\":{\"{}\":{\"t\":1,\"n\":\"{}\",\"f\":{\"test.txt\":{\"t\":2,\"n\":\"test.txt\",\"o\":\"{}\",\"c\":\"This is a test file\",\"m\":432}},\"o\":\"{}\",\"m\":2147484157}},\"o\":\"root\",\"m\":2147484141},\"etc\":{\"t\":1,\"n\":\"etc\",\"f\":{\"hostname\":{\"t\":2,\"n\":\"hostname\",\"o\":\"root\",\"c\":\"test-hostname\",\"m\":420},\"issue\":{\"t\":2,\"n\":\"issue\",\"o\":\"root\",\"c\":\"Ubuntu 22.04\",\"m\":420}},\"o\":\"root\",\"m\":2147484141}},\"o\":\"root\",\"m\":2147484141},\"home\":\"/home/{}\"}"
 
 func TestPathResolution(t *testing.T) {
 	vfs := &plugin.VFS{}
