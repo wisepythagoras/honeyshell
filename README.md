@@ -55,7 +55,7 @@ The output should look something like this:
 
 ## Plugins
 
-Honeyshell has a Lua-based plugin engine which enables you to do whatever you want with the information that's received. For example, You can:
+Honeyshell has a Lua-based plugin engine (documentation is still being worked on) which enables you to do whatever you want with the information that's received. For example, You can:
 
 1. Send all username and password pairs to a webhook.
 2. Aggregate the IPs that attempt to connect by country and time.
@@ -65,4 +65,4 @@ If your end goal is to emulate a system, you should make a snapshot of an existi
 
 Plans are being drafted on using WebAssembly in the future, but I won't get started soon as there are things that are misisng that will be needed.
 
-An plugin that defines a prompt and a command can be found in [this repository](https://github.com/wisepythagoras/system-example-plugin).
+A plugin that defines a prompt and a command can be found in [this repository](https://github.com/wisepythagoras/system-example-plugin).
