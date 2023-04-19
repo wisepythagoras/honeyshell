@@ -66,3 +66,7 @@ If your end goal is to emulate a system, you should make a snapshot of an existi
 Plans are being drafted on using WebAssembly in the future, but I won't get started soon as there are things that are misisng that will be needed.
 
 A plugin that defines a prompt and a command can be found in [this repository](https://github.com/wisepythagoras/system-example-plugin).
+
+## License
+
+Although the license for the source code is GNU GPL v3, I prohibit the use of the code herein for the training of any kind of AI model.
