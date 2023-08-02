@@ -8,7 +8,7 @@ require (
 	golang.org/x/term v0.10.0
 	gorm.io/driver/sqlite v1.5.2
 	gorm.io/gorm v1.25.2
-	layeh.com/gopher-luar v1.0.10
+	layeh.com/gopher-luar v1.0.11
 )
 
 require (
