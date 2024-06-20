@@ -14,7 +14,9 @@ import (
 	"unsafe"
 )
 
-// ChangePermissions : Change the permissions to a specific user.
+// ChangePermissions changes the permissions to a specific user. For example, you
+// can supply `nobody` when the server is run so that even if there's a vulnerability
+// and an attacker can escape the sandbox, they won't have any permissions.
 func ChangePermissions(name string) (uint32, uint32, error) {
 	// Get the passwd before moving on.
 	passwdC, err := GetPasswd(name)
@@ -36,7 +38,7 @@ func ChangePermissions(name string) (uint32, uint32, error) {
 	return uint32(passwdC.pw_gid), uint32(passwdC.pw_uid), nil
 }
 
-// SockAddrToIP : Return the IP address of a sockaddr
+// SockAddrToIP returns the IP address of a sockaddr.
 func SockAddrToIP(sock *syscall.Sockaddr) (ip net.IP, port int, success bool) {
 	switch sock := (*sock).(type) {
 	case *syscall.SockaddrInet4:
@@ -48,7 +50,7 @@ func SockAddrToIP(sock *syscall.Sockaddr) (ip net.IP, port int, success bool) {
 	return
 }
 
-// GetPasswd : Gets the passwd of a specific user.
+// GetPasswd gets the passwd of a specific user.
 func GetPasswd(name string) (*C.struct_passwd, error) {
 	// Read the name as a C string.
 	nameC := C.CString(name)

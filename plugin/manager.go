@@ -7,6 +7,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// PluginManager handles all things related to the plugins. Use this
+// instance to load plugins and get commands.
 type PluginManager struct {
 	DB              *gorm.DB
 	PluginVFS       *VFS
@@ -17,6 +19,7 @@ type PluginManager struct {
 	LoginMessageFn  LoginMessageFn
 }
 
+// LoadPlugins loads the plugin by supplying a `path`.
 func (pm *PluginManager) LoadPlugins(path string) error {
 	var err error
 	pm.plugins, err = LoadPlugins(path, pm.DB)
@@ -60,6 +63,7 @@ func (pm *PluginManager) LoadPlugins(path string) error {
 	return nil
 }
 
+// defaultPrompt displays a very basic bash-like prompt.
 func (pm *PluginManager) defaultPrompt(s *Session) string {
 	if s.User.Username == "root" {
 		return "# "
@@ -68,6 +72,8 @@ func (pm *PluginManager) defaultPrompt(s *Session) string {
 	return "$ "
 }
 
+// GetComand returns a function handler and a boolean (if it was found or not)
+// for a command (as a string).
 func (pm *PluginManager) GetCommand(cmd string) (CommandFn, bool) {
 	if cmd, ok := pm.commandMap[cmd]; ok {
 		return cmd, ok

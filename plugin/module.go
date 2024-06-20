@@ -12,6 +12,7 @@ type nativeModule struct {
 	L *lua.LState
 }
 
+// importFn will load a supported module into the Lua runtime.
 func (nm *nativeModule) importFn(module string) *lua.LTable {
 	switch module {
 	case "fmt":
@@ -39,6 +40,8 @@ func (nm *nativeModule) importFn(module string) *lua.LTable {
 	return nil
 }
 
+// createImportFn exposes the `import` function in Lua so that you can
+// call `import("something")` to load native modules.
 func (nm *nativeModule) createImportFn() {
 	nm.L.SetGlobal("import", luar.New(nm.L, nm.importFn))
 }

@@ -15,7 +15,7 @@ type Logman struct {
 var theLog *Logman
 var once sync.Once
 
-// GetLogmanInstance : Get (or create) the instance of the logger.
+// GetLogmanInstance gets (or create) the instance of the logger.
 func GetLogmanInstance() *Logman {
 	once.Do(func() {
 		theLog = CreateLogmanLogger("honeyshell.log")
@@ -24,7 +24,7 @@ func GetLogmanInstance() *Logman {
 	return theLog
 }
 
-// CreateLogmanLogger : Create a logger.
+// CreateLogmanLogger creates a logger.
 func CreateLogmanLogger(fname string) *Logman {
 	file, _ := os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 

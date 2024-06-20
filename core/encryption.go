@@ -10,13 +10,13 @@ import (
 	"encoding/pem"
 )
 
-// Encryption : This is the object that defines an encryption key class.
+// Encryption is the object that defines an encryption key class.
 type Encryption struct {
 	key     *rsa.PrivateKey
 	bitSize int
 }
 
-// GenerateKey : Generate a set of keys.
+// GenerateKey generates a set of public and private keys.
 func (enc *Encryption) GenerateKey() bool {
 	// Create a new rand reader.
 	reader := rand.Reader
@@ -35,7 +35,7 @@ func (enc *Encryption) GenerateKey() bool {
 	return true
 }
 
-// GetPrivateKey : Get the PEM private key string.
+// GetPrivateKey gets the PEM private key string.
 func (enc *Encryption) GetPrivateKey() string {
 	// Create the PEM private key block.
 	privateKey := &pem.Block{
@@ -50,7 +50,7 @@ func (enc *Encryption) GetPrivateKey() string {
 	return string(privateBytes)
 }
 
-// GetPublicKey : Get the public PEM key string.
+// GetPublicKey gets the public PEM key string.
 func (enc *Encryption) GetPublicKey() string {
 	// Get the asn1 bytes from the public key.
 	asn1Bytes, err := asn1.Marshal(enc.key.PublicKey)

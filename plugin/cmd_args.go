@@ -9,21 +9,26 @@ import (
 	luar "layeh.com/gopher-luar"
 )
 
+// OptConfig manages options.
 type OptConfig struct {
 	Opts       map[string]bool
 	ParsedOpts map[string]any
 	BareArgs   []string
 }
 
+// AddOne adds a single argument and a boolean on whether it has args to
+// the map.
 func (o *OptConfig) AddOne(arg string, hasArg bool) {
 	o.Opts[arg] = hasArg
 }
 
+// AddBoth is similar ot AddOne, but it also adds a long description.
 func (o *OptConfig) AddBoth(short, long string, hasArg bool) {
 	o.Opts[short] = hasArg
 	o.Opts[long] = hasArg
 }
 
+// Get returns the parsed options.
 func (o *OptConfig) Get(arg string) any {
 	if o.ParsedOpts == nil {
 		return nil

@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// SSHServer : This is the object that defines an SSH server.
+// SSHServer This is the object that defines an SSH server.
 type SSHServer struct {
 	Logger        *Logman
 	db            *gorm.DB
@@ -27,7 +27,7 @@ type SSHServer struct {
 	PluginManager *plugin.PluginManager
 }
 
-// Init Initialize the SSH server.
+// Init Initializes the SSH server.
 func (server *SSHServer) Init() bool {
 	server.config = &ssh.ServerConfig{
 		PasswordCallback:  server.passwordChecker,
@@ -151,7 +151,7 @@ func (server *SSHServer) SetDB(db *gorm.DB) {
 	server.db = db
 }
 
-// HandleSSHAuth Handles the authentication process.
+// HandleSSHAuth Handles the authentication process, as well as any individual session.
 func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 	conn, chans, reqs, err := ssh.NewServerConn(*connection, server.config)
 
@@ -262,7 +262,8 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 					}
 
 					sessionTerm.Write([]byte(out))
-					fmt.Println("->", line)
+					server.Logger.Println("[client] $", line)
+					log.Println("[client] $", line)
 				}
 
 				sessionTerm.SetPrompt(server.PluginManager.PromptPlugin(session))
@@ -273,7 +274,7 @@ func (server *SSHServer) HandleSSHAuth(connection *net.Conn) bool {
 	return true
 }
 
-// ListenLoop : Run the listener for our server.
+// ListenLoop Run the listener for our server.
 func (server *SSHServer) ListenLoop() {
 	// Now, this is the main loop where all the connections should be captured.
 	for {

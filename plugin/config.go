@@ -15,6 +15,9 @@ type PasswordInterceptFn func(string, string, *net.IP) bool
 type PromptFn func(*Session) string
 type LoginMessageFn func(*Session) string
 
+// Config is a struct that handles everything related to the sandbox. For
+// example, the registered commands, the password interceptor, the fake
+// prompt, and other things.
 type Config struct {
 	CommandCallbacks    map[string]CommandFn
 	PasswordInterceptor PasswordInterceptFn
@@ -23,10 +26,15 @@ type Config struct {
 	vfs                 *VFS
 }
 
+// Init initializes the instance. This must run, as it instanciates the
+// command callbacks.
 func (c *Config) Init() {
 	c.CommandCallbacks = make(map[string]CommandFn)
 }
 
+// RegisterCommand adds a command to the list of supported commands. This
+// means that an attacker can run the command by the supplied `cmd` and then
+// that will run the command function (`cmdFn`).
 func (c *Config) RegisterCommand(cmd, dir string, cmdFn CommandFn) bool {
 	if cmdFn == nil {
 		log.Println("No command function for command", cmd)
