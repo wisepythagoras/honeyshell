@@ -14,12 +14,14 @@ const T_FILE = 2
 const T_SYMLINK = 3
 const T_ANY = 4
 
+// Perm is the basic permissions structure of a Linux file.
 type Perm struct {
 	Read  bool
 	Write bool
 	Exec  bool
 }
 
+// VFSFile represents the virtual file in the VFS.
 type VFSFile struct {
 	Type     int                `json:"t"`
 	Name     string             `json:"n"`
@@ -34,6 +36,7 @@ type VFSFile struct {
 	CmdFn    CommandFn          `json:"-"`
 }
 
+// findFile returns the directory of a file, which it finds by its name.
 func (f *VFSFile) findFile(name string, rest []string) (string, *VFSFile, error) {
 	if name == f.Name && len(rest) == 0 {
 		return name, f, nil
@@ -60,6 +63,7 @@ func (f *VFSFile) findFile(name string, rest []string) (string, *VFSFile, error)
 	return "", nil, fmt.Errorf("file not found")
 }
 
+// CanAccess returns the permissions the user has on the specific file.
 func (f *VFSFile) CanAccess(user *User) Perm {
 	var buf [32]bool
 	w := 0
@@ -108,6 +112,7 @@ func (f *VFSFile) CanAccess(user *User) Perm {
 	return perm
 }
 
+// ForEach loops through all of the files.
 func (f *VFSFile) ForEach(callback func(*VFSFile, int)) {
 	if f.Type == T_FILE {
 		callback(f, 0)
@@ -122,6 +127,7 @@ func (f *VFSFile) ForEach(callback func(*VFSFile, int)) {
 	}
 }
 
+// StrMode converts the permissions (or mode) of a file into a string.
 func (f *VFSFile) StrMode() string {
 	return f.Mode.String()
 }
