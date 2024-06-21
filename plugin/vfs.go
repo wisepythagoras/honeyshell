@@ -21,7 +21,9 @@ type Perm struct {
 	Exec  bool
 }
 
-// VFSFile represents the virtual file in the VFS.
+// VFSFile represents the virtual file in the VFS. It can be a regular
+// file (text, executable, etc) or a directory containing its own set of
+// files.
 type VFSFile struct {
 	Type     int                `json:"t"`
 	Name     string             `json:"n"`
@@ -132,6 +134,7 @@ func (f *VFSFile) StrMode() string {
 	return f.Mode.String()
 }
 
+// VFS is the recursive struct that describes the virtual file system.
 type VFS struct {
 	Root VFSFile `json:"root"`
 	Home string  `json:"home"`
@@ -139,6 +142,8 @@ type VFS struct {
 	User *User   `json:"-"`
 }
 
+// resolveDotPath is a helper function that converts a dot path to an absolute
+// path.
 func (vfs *VFS) resolveDotPath(path string) string {
 	if path == "." || path == "./" {
 		return vfs.PWD
@@ -147,6 +152,7 @@ func (vfs *VFS) resolveDotPath(path string) string {
 	return filepath.Join(vfs.PWD, path)
 }
 
+// FindFile returns the path and VFSFile of a file in the path.
 func (vfs *VFS) FindFile(path string) (string, *VFSFile, error) {
 	if path == "" {
 		path = "/"
@@ -185,6 +191,7 @@ func (vfs *VFS) FindFile(path string) (string, *VFSFile, error) {
 	return vfs.Root.findFile(parts[0], parts[1:])
 }
 
+// Mkdir creates a new directory at the given path.
 func (vfs *VFS) Mkdir(path string, mode os.FileMode) (*VFSFile, error) {
 	_, file, err := vfs.FindFile(filepath.Dir(path))
 
@@ -236,6 +243,7 @@ func (vfs *VFS) Mkdir(path string, mode os.FileMode) (*VFSFile, error) {
 	return &newFile, nil
 }
 
+// Rmfile deletes a file in the filesystem.
 func (vfs *VFS) Rmfile(path string) error {
 	_, parentFolder, err := vfs.FindFile(filepath.Dir(path))
 
@@ -272,6 +280,7 @@ func (vfs *VFS) Rmfile(path string) error {
 	return nil
 }
 
+// WriteFile adds contents to a specific file in the path.
 func (vfs *VFS) WriteFile(path, contents string) error {
 	_, parentFolder, err := vfs.FindFile(filepath.Dir(path))
 
